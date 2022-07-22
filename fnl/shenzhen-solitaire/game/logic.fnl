@@ -222,18 +222,22 @@
                            (R.err (.. name " " slot "." col " card was invalid")))]
       true))
 
-  (fn move-logical-ok? [[from-slot from-col from-card] [to-slot to-col to-card]]
-    ;; a move must pass some basic logical checks
-    ;; you cant move from slot+col to the same slot+col
-    (let [slot-same (= from-slot to-slot)
-          col-same (= from-col to-col)]
-      (if (not (and slot-same col-same))
-        (R.ok true)
-        (R.err "cant move from and to the same slot.col"))))
+  ; (fn move-logical-ok? [[from-slot from-col from-card] [to-slot to-col to-card]]
+  ;   ;; a move must pass some basic logical checks
+  ;   ;; you cant move from slot+col to the same slot+col
+  ;   (let [slot-same (= from-slot to-slot)
+  ;         col-same (= from-col to-col)]
+  ;     (if (not (and slot-same col-same))
+  ;       (R.ok true)
+  ;       (R.err "cant move from and to the same slot.col"))))
 
   (-> (r/let [_ (location-arg-ok? :from from)
               _ (location-arg-ok? :to to)
-              _ (move-logical-ok? from to)
+              ;; we will allow moving from -> to the same location, this is not
+              ;; illegal, more of a no-op and allowing it lets us pickup a card
+              ;; in and put it back down in the same place if it has no valid
+              ;; moves.
+              ;; _ (move-logical-ok? from to)
               _ (location-resolves-ok? :from from)
               _ (location-resolves-ok? :to to true)
               [from-slot from-col-n from-card-n] from
@@ -251,10 +255,10 @@
           (R.ok true)
           (R.err "unable proceed, this was unexpected, please log an issue")))))
 
-(fn M.start-new-game [_state ?seed]
+(fn M.start-new-game [?seed]
   "Command, start a new game.
 
-  Accepts a state which is discarded and an optional seed value."
+  Accepts an optional seed value."
   (let [game-id (math.random 1 9_000_000_000) ;; uniqueness not *really* a big deal
         seed (or ?seed (math.random 1 9_000_000_000))]
     (-> (S.empty-state)
