@@ -25,7 +25,6 @@
 (import-macros {: use} :shenzhen-solitaire.lib.donut.use)
 
 (use {: range} :shenzhen-solitaire.lib.donut.iter :ns iter
-     {: map : each : flat-map : pairs->table} :shenzhen-solitaire.lib.donut.enum :ns enum
      {: inspect!} :shenzhen-solitaire.lib.donut.inspect
      E :shenzhen-solitaire.lib.donut.enum
      R :shenzhen-solitaire.lib.donut.result
@@ -72,8 +71,6 @@
                             [cards] (E.map (valid-locations-for-putdown game)
                                            #[(logic.can-place-ok? game-state $2 cards) $2]))
         locations (-> checked-locations
-                      ;; TODO collect-from-ok? returns result<location> instead of result<true>?
-                      ;; allow replacing the taken card 
                       (E.append$ (match hand-from
                                    [slot col card] [[:ok true] [slot col (math.max 1 card)]]
                                    _ [[:err :x] :x]))
@@ -91,40 +88,32 @@
   (let [{: view : game-state} game]
     (ui-view.draw view game-state)))
 
-(fn m.next-location [game event]
+(fn shift-location [game event direction]
   ;; see if cursor is curently on valid location, if so, go to next (or loop)
   ;; if not, go to first.
   (let [{:game-state {: cursor : valid-locations}} game
         [cursor-slot cursor-col-n cursor-card-n] cursor
         current-index (accumulate [f nil i location (ipairs valid-locations) :until f]
-                        (match location
-                          [cursor-slot cursor-col-n cursor-card-n] i))
-        next-index (match current-index
-                     nil 1
-                     (where i (= i (length valid-locations))) 1
-                     i (+ i 1))
+                        (match location [cursor-slot cursor-col-n cursor-card-n] i))
+        len-locations (length valid-locations)
+        next-index (match [direction current-index]
+                     [:next nil] 1
+                     (where [:next i] (= i len-locations)) 1
+                     [:next i] (+ i 1)
+                     [:prev nil] len-locations
+                     (where [:prev i] (= i 1)) len-locations
+                     [:prev i] (- i 1))
         next-location (match valid-locations
                         [nil] cursor
                         list (. valid-locations next-index))]
-    (inspect! :next-loc current-index next-index next-location)
+    (inspect! :shift-loc current-index next-index next-location)
     (tset game :game-state :cursor next-location)
     (m.draw-game game)))
 
+(fn m.next-location [game event]
+  (shift-location game event :next))
 (fn m.prev-location [game event]
-  (let [{:game-state {: cursor : valid-locations}} game
-        [cursor-slot cursor-col-n cursor-card-n] cursor
-        current-index (accumulate [f nil i location (ipairs valid-locations) :until f]
-                        (match location
-                          [cursor-slot cursor-col-n cursor-card-n] i))
-        next-index (match current-index
-                     nil (length valid-locations)
-                     (where i (= i 1)) (length valid-locations)
-                     i (- i 1))
-        next-location (match valid-locations
-                        [nil] cursor
-                        list (. valid-locations next-index))]
-    (tset game :game-state :cursor next-location)
-    (m.draw-game game)))
+  (shift-location game event :prev))
 
 (fn m.pick-up-put-down [game event]
   ;; just pick up for now
@@ -211,7 +200,6 @@
 (fn M.start-new-game [buf-id seed]
   (var current-game nil)
   (let [logic-state (logic.start-new-game seed)
-        _ (vim.notify "seed:" logic-state.seed)
         game-state (m.game-state<-logic-state {} logic-state)
         responder (fn [event] (m.handle-event current-game event))
         view (ui-view.new buf-id game-state responder default-config)]
@@ -225,67 +213,3 @@
 
 (M.start-new-game 133 1)
 (values nil)
-
-; (var view nil)
-; (let [logic (require :shenzhen-solitaire.game.logic)
-;       buf-id 17
-;       logic-state (logic.start-new-game)
-;       game-state (logic.S.clone-state logic-state)
-;       _ (doto game-state
-;           (tset :cursor [:tableau 1 5])
-;           (tset :hand [])
-;           (tset :hand-from []))
-;       ; _ (tset game-state :cursor [:tableau 1 2])
-;       ;; generate some test layout
-;       ; _ (let [(rem hand) (enum/split (. game-state.tableau 1) 3)]
-;       ;     (tset game-state :tableau 1 rem)
-;       ;     (tset game-state :hand [hand]))
-;       ; _ (let [(rem cell) (enum/split (. game-state.tableau 8) 5)]
-;       ;     (tset game-state :tableau 8 rem)
-;       ;     (tset game-state :cell 1 cell))
-;       ; _ (let [(rem flower) (enum/split (. game-state.tableau 8) 4)]
-;       ;     (tset game-state :tableau 8 rem)
-;       ;     (tset game-state :foundation 4 flower))
-;       ; _ (let [(rem foundation) (enum/split (. game-state.tableau 4) 5)]
-;       ;     (tset game-state :tableau 4 rem)
-;       ;     (tset game-state :foundation 1 foundation))
-;       ; _ (let [(rem other) (enum/split (. game-state.tableau 2) 2)]
-;       ;     (tset game-state :tableau 2 rem)
-;       ;     (tset game-state :tableau 5 (e.concat$ (. game-state.tableau 5) other)))
-;       hand-hover [:tableau 1 2]
-;       config {:card {:size {:width 7 :height 5}
-;                      :borders {:ne :╮ :nw :╭ :se :╯ :sw :╰
-;                                :n :─ :s :─ :e :│ :w :│}}
-;               :tableau {:pos {:row 7 :col 1}
-;                         :gap 3}
-;               :cell {:pos {:row 1 :col 1}
-;                      :gap 3}
-;               :foundation {:pos {:row 1 :col 40}
-;                            :gap 3}
-;               :hand-hover hand-hover
-;               :highlight {:empty {:fg :grey}
-;                           :coin {:fg :#e8df78 :bg :#292929}
-;                           :string {:fg :#879ff6 :bg :#292929}
-;                           :myriad {:fg :#23b3ac :bg :#292929}
-;                           :flower {:fg :#934188 :bg :#292929}
-;                           :dragon-green {:fg :#52ad56 :bg :#292929}
-;                           :dragon-white {:fg :#ffffff :bg :#292929}
-;                           :dragon-red {:fg :#b34d4d :bg :#292929}}
-;               :size {:width 80 :height 40}}
-;       responder (fn [event]
-;                   (let [[cursor-slot cursor-col-n cursor-card-n] game-state.cursor]
-;                     (match event
-;                       {:name :move-right} (do
-;                                             (tset game-state :cursor [cursor-slot
-;                                                                       (+ cursor-col-n 1)
-;                                                                       cursor-card-n])
-;                                             (M.draw view game-state))
-;                       {:name :move-left} (do
-;                                             (tset game-state :cursor [cursor-slot
-;                                                                       (- cursor-col-n 1)
-;                                                                       cursor-card-n])
-;                                             (M.draw view game-state)))))
-;       a-view (M.new buf-id game-state responder config)]
-;   (set view a-view)
-;   (M.draw view game-state)
-;   nil)
