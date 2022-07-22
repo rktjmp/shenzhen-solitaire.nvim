@@ -67,6 +67,8 @@
       a-state (-> (S.push-event a-state [name data]))
       (nil err) (error err))))
 
+;;; Event Apply-ers
+
 (fn handlers.started-new-game [state {: id : seed}]
   (let [deck (new-deck)]
     (doto state
@@ -89,7 +91,8 @@
 
 (fn handlers.moved-cards [state {: from : to}]
   ;; TODO? currently this is always just concatting from-cards onto to-col,
-  ;; which is actually all we ever need, but to *does* have (and requires!) the card-n field.
+  ;; which is actually all we ever need, but to *does* have (and requires!) the
+  ;; card-n field.
   (let [[from-slot from-col-n from-card-n] from
         [to-slot to-col-n to-card-n] to
         (left-over-from hand) (enum.split (. state from-slot from-col-n) from-card-n)]
@@ -99,7 +102,7 @@
 
 (local M {})
 
-(fn collect-from-ok? [state [slot col-n card-n]]
+(fn M.collect-from-ok? [state [slot col-n card-n]]
   "Validate whether its an ok move to pick cards up from a location.
   Assumes location is valid!"
   (r/let [col (?. state slot col-n)]
@@ -175,12 +178,23 @@
       [_ true] true
       [_ false] (values nil "must create alternating suit descending sequence"))))
 
-(fn can-place-ok? [state [slot col-n card-n] cards]
+(fn M.can-place-ok? [state [slot col-n card-n] cards]
   (match [slot (. state slot col-n)]
     [:foundation foundation] (place-on-foundation-ok? foundation cards (= col-n 4))
     [:cell cell] (place-on-cell-ok? cell cards)
     [:tableau col] (place-on-tableau-ok? col cards)
     _ (error (fmt "unmatched can-place-on? %s %s" (inspect slot col-n)))))
+
+;;; External Commands
+
+;;; These are effectively the API to operating on the game logic.
+;;;
+;;; The primary function will be move-cards (generate event or error), or
+;;; move-cards-ok? (check validity of move and return result<>). Every move in
+;;; the game can be described by this except for the dragon collection which
+;;; requires picking up 4 separate cards and placing them in a
+;;; normally-only-one-card cell - and so that particular task is done by
+;;; lock-dragons.
 
 (fn M.move-cards-ok? [state from to]
   "Proofcheck a proposed move, returns `ok<true>` or `err<reason>`. See
@@ -225,11 +239,11 @@
               [from-slot from-col-n from-card-n] from
               [to-slot to-col-n to-card-n] to
               ;; check if we're actually allowed to get the cards
-              can-collect? (collect-from-ok? state from)
+              can-collect? (M.collect-from-ok? state from)
               ;; split out the hand we want to move
               (rem hand) (enum.split (. state from-slot from-col-n) from-card-n)
               ;; check if we are allowed to place the cards down
-              can-place? (can-place-ok? state to hand)]
+              can-place? (M.can-place-ok? state to hand)]
         ;; technically any failures above will already shortcircut before we
         ;; get here but we will exercise the check anyway
         ; (inspect! :can-collect? can-collect? :can-place? can-place?)
@@ -267,7 +281,10 @@
   ;; tableau cards must be at the end of the stack
   ;; must have empty cell
   ;; if we have 4, we can lock the dragons by moving all to the lowest unoccupied cell
-  nil)
+  (error :not-implemented))
+
+(fn M.win-game [state]
+  (error :not-implemented))
 
 (tset M :S S)
 (values M)
