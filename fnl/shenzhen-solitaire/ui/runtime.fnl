@@ -34,7 +34,7 @@
 (local M {})
 (local m {:games []})
 
-(fn m.update-valid-locations [game]
+(fn m.generate-valid-locations [game]
   ;; if we have nothing in hand, search all positions in the layout for
   ;; locations that can be picked up.
   ;; TODO sort this so the first valid move is directly after the current
@@ -70,10 +70,15 @@
                                          #[(logic.collect-from-ok? game-state $2) $2])
                             [cards] (E.map (valid-locations-for-putdown game)
                                            #[(logic.can-place-ok? game-state $2 cards) $2]))
+        ;; dont insert duplicate position if hand is same as one we generate
+        ugly (match hand-from
+               [h-slot h-col h-card] #(if (accumulate [f true _ [_ [slot col card]] (ipairs $1) :until (not f)]
+                                            (match [h-slot h-col h-card] [slot col card] false _ true))
+                                        (E.append$ $1 [[:ok true] hand-from])
+                                        (values $1))
+               _ #$1)
         locations (-> checked-locations
-                      (E.append$ (match hand-from
-                                   [slot col card] [[:ok true] [slot col (math.max 1 card)]]
-                                   _ [[:err :x] :x]))
+                      (ugly)
                       (E.filter #(match $2 [[:ok] location] true))
                       (E.map #(match $2 [_ location] location))
                       (E.sort$ (fn [[slot-1 col-1 card-1] [slot-2 col-2 card-2]]
@@ -81,11 +86,12 @@
                                        sum-1 (+ (. slot-val slot-1) (* 100 col-1) (* 10 card-1))
                                        sum-2 (+ (. slot-val slot-2) (* 100 col-2) (* 10 card-2))]
                                    (< sum-1 sum-2)))))]
-    (tset game-state :valid-locations locations)))
+    (values locations)))
 
 (fn m.draw-game [game]
-  (m.update-valid-locations game)
-  (let [{: view : game-state} game]
+  (let [valid-locations (m.generate-valid-locations game)
+        {: view : game-state} game]
+    (tset game-state :valid-locations valid-locations)
     (ui-view.draw view game-state)))
 
 (fn shift-location [game event direction]
@@ -106,9 +112,8 @@
         next-location (match valid-locations
                         [nil] cursor
                         list (. valid-locations next-index))]
-    (inspect! :shift-loc current-index next-index next-location)
     (tset game :game-state :cursor next-location)
-    (m.draw-game game)))
+    (values game)))
 
 (fn m.next-location [game event]
   (shift-location game event :next))
@@ -116,7 +121,6 @@
   (shift-location game event :prev))
 
 (fn m.pick-up-put-down [game event]
-  ;; just pick up for now
   (let [{: game-state } game
         {: logic-state} game
         {: cursor : hand : hand-from} game-state]
@@ -135,11 +139,13 @@
       ;; makes an invalid sequence
       [cards] (match [cursor hand-from (logic.can-place-ok? game-state cursor cards)]
                 ;; trying to put down where we pickd up, don't do any checks, just revert the state
-                [[s cl cd] [s cl cd] _] (let [game-state (doto game-state
-                                                           (tset :hand [])
-                                                           (tset :hand-from []))
-                                              new-game-state (m.game-state<-logic-state game-state logic-state)]
-                                          (tset game :game-state new-game-state))
+                [[s cl cd] [s cl cd] _]
+                (let [game-state (doto game-state
+                                   (tset :hand [])
+                                   (tset :hand-from []))
+                      new-game-state (m.game-state<-logic-state game-state logic-state)]
+                  (tset game :game-state new-game-state))
+                ;; otherwise can we move?
                 [_ _ [:ok]]
                 (let [{: hand-from} game-state
                       new-logic-state (logic.move-cards logic-state hand-from cursor)
@@ -149,13 +155,19 @@
                   (doto game
                     (tset :game-state new-game-state)
                     (tset :logic-state new-logic-state)))
+                ;; hard error here, ui shouldn't request bad things
                 [_ _ [:err e]] (error e)))
-    (m.draw-game game)))
+    (values game)))
 
 (fn m.handle-event [game event]
   (let [{: name} event]
     (match (. m name)
-      f (f game event)
+      f (do
+          ;; its assumed any event requires a redraw afterwards
+          ;; its's also assumed that events are dirty disgusting things that
+          ;; may modify any data without passing it back.
+          (f game event)
+          (m.draw-game game))
       nil (error (string.format "no handler for %s" name)))))
 
 
