@@ -52,10 +52,11 @@
                                           layout.foundation.gap
                                           (* (- col-n 1)
                                              (+ layout.foundation.gap layout.card.size.width)))}
-      ;; cursor is as-would be but shifed down and over
+      ;; cursor is as-would be but shifted over
       [:hand col-n card-n] (let [[slot base-col-n base-card-n] view.cursor
-                                 {: row : col} (game-location->view-pos [slot base-col-n base-card-n] view)]
-                             {:row (+ row 2) :col (+ col 1)})
+                                 {: row : col} (game-location->view-pos [slot base-col-n (+ base-card-n card-n)]
+                                                                        view)]
+                             {:row row :col (+ col 1)})
       _ (error (vim.inspect location)))))
 
 (fn map-game-state-cards [game-state f]
