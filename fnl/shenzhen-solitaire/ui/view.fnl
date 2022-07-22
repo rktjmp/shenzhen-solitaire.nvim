@@ -54,9 +54,8 @@
                                              (+ layout.foundation.gap layout.card.size.width)))}
       ;; cursor is as-would be but shifed down and over
       [:hand col-n card-n] (let [[slot base-col-n base-card-n] view.cursor
-                                 {: row : col} (game-location->view-pos [slot base-col-n (+ base-card-n card-n)]
-                                                                        view)]
-                             {: row :col (+ col 1)})
+                                 {: row : col} (game-location->view-pos [slot base-col-n base-card-n] view)]
+                             {:row (+ row 2) :col (+ col 1)})
       _ (error (vim.inspect location)))))
 
 (fn map-game-state-cards [game-state f]
@@ -86,7 +85,14 @@
       (set-hl :FLOWER highlight-config.flower)))
   (fn configure-buffer [view]
     (let [{: buf-id : responder} view
-          set-km #(api.nvim_buf_set_keymap buf-id :n $1 "" {:callback $2 :desc $3})]
+          set-km #(api.nvim_buf_set_keymap buf-id
+                                           :n
+                                           (. config :keys $1)
+                                           ""
+                                           {:callback (fn [] (responder {:name $1 :view view}))
+                                            :noremap false
+                                            :nowait true
+                                            :desc $2})]
       ;; TODO set no-mod, etc
       (let [opts {:filetype :shenzhen-solitaire}]
         (enum/map opts #(api.nvim_buf_set_option buf-id $1 $2)))
@@ -97,10 +103,11 @@
                                       :list false
                                       :relativenumber false}]
                             (enum/map opts #(api.nvim_win_set_option win-id $1 $2))))
-
-      (set-km config.keys.move-right #(responder {:name :move-right : view}) "Move right")
-      (set-km config.keys.move-left #(responder {:name :move-left : view}) "Move left")
-      (set-km config.keys.pick-up-put-down #(responder {:name :pick-up-put-down : view}) "Pick up or Put down")))
+      (set-km :next-location "Move to next location")
+      (set-km :prev-location "Move to previous location")
+      (set-km :move-right "Move right")
+      (set-km :move-left "Move left")
+      (set-km :pick-up-put-down "Pick up or Put down")))
 
   (let [real-buf-id buf-id
         ;; This view is strictly a configuration container and should not
@@ -148,8 +155,9 @@
   ;; For now we do this super inefficently, because in the end it probably doesn't matter.
   ;; Potential improvements:
   ;; Apply highlights by consecutive run instead of per-position
-
   ;; Track "damage" diff against last fb and only re-write where we need to
+  ;; TODO remove cursor from view, it's derived from the cursor position in the game state
+  (tset view :cursor game-state.cursor)
   (fn draw-card [fbo card]
     (let [{: pos : size : bitmap : highlight} card
           edge-hl :Normal
@@ -178,6 +186,11 @@
           (tset view :cards card :highlight (highlight-name-for-card card))
           (tset view :cards card :pos pos))
         (draw-card fbo (. view :cards card))))
+    (each [i location (ipairs game-state.valid-locations)]
+      (let [{: row : col} (game-location->view-pos location view)
+            pos {:row (+ row 1) :col (- col 2)}]
+        (frame-buffer.write fbo :draw pos {:width 1 :height 1} #"▹")
+        (frame-buffer.write fbo :color pos {:width 1 :height 1} #:Comment)))
     ;; draw cursor
     (let [{: row : col} (game-location->view-pos game-state.cursor view)
           pos {:row (+ row 1) :col (- col 2)}]
