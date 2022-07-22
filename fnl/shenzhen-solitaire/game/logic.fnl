@@ -129,11 +129,12 @@
       ;; ERR catch all else
       _ (error (fmt "unmatched collect request: %s.%d %d" slot col-n card-n)))))
 
-(fn place-on-foundation-ok? [foundation cards flower-foundation?]
-  (r/let [_ (or (= 1 (length cards)) (r/err "may only place one card on a foundation"))
+(fn place-on-foundation-ok? [foundation card-n cards flower-foundation?]
+  (r/let [_ (or (= 1 (length cards)) (r/err "may only place one card at a time on a foundation"))
           [card] cards
           ;; we always place on the last foundation card
           foundation-card (. foundation (length foundation))
+          _ (or (= card-n (+ 1 (length foundation))) (r/err "must place on top of last card in foundation"))
           _ (if flower-foundation?
              (or (flower-card? card) (r/err "may only place flower card on flower foundation"))
              (or (suited-card? card) (r/err "may only place suited cards on foundation")))]
@@ -152,19 +153,21 @@
        (where [[suit last-val] [suit next-val]] (= next-val (+ last-val 1))) true
        [_ _] (values nil "must place same suit and +1 value on existing foundation")))))
 
-(fn place-on-cell-ok? [cell cards]
+(fn place-on-cell-ok? [cell card-n cards]
   ;; for the most part we can only put one card on a cell at a time, except for locking dragons
   ;; which should accept an empty cell and exactly 4 cards of the same type
   ;; cells always must be empty to place a card(s).
-  (r/unit (match [cell cards]
-            ;; ERR cell occupied
-             [[not-nil] _] (values nil "can only place into an empty cell")
-            ;; OK empty cell and all the same dragon
-            (where [[nil] [[d _] [d _] [d _] [d _]]] (string.match d "^DRAGON-")) true
-            ;; OK empty cell and only one card
-            (where [[nil] [card nil]]) true
-            ;; ERR more than one card
-            (where [_ [card & rest]] (< 0 (length rest))) (values nil "can only place one card on a cell"))))
+  (r/let [_ (or (= 1 card-n) (values nil "must place on card-n 1 for cells"))]
+         (match [cell cards]
+           ;; ERR cell occupied
+           [[not-nil] _] (values nil "can only place into an empty cell")
+           ;; OK empty cell and all the same dragon
+           (where [[nil] [[d _] [d _] [d _] [d _]]] (string.match d "^DRAGON-")) true
+           ;; OK empty cell and only one card
+           (where [[nil] [card nil]]) true
+           ;; ERR more than one card
+           (where [_ [card & rest]] (< 0 (length rest)))
+           (values nil "can only place one card on a cell"))))
 
 (fn place-on-tableau-ok? [column card-n cards]
   ;; we can place on the tableau at the end the col only
@@ -187,11 +190,8 @@
 
 (fn M.can-place-ok? [state [slot col-n card-n] cards]
   (match [slot (. state slot col-n)]
-    ;; TODO +1 end of col
-    [:foundation foundation] (place-on-foundation-ok? foundation cards (= col-n 4))
-    ;; TODO +1 end of col
-    [:cell cell] (place-on-cell-ok? cell cards)
-    ;; DONE +1 end of col
+    [:foundation foundation] (place-on-foundation-ok? foundation card-n cards (= col-n 4))
+    [:cell cell] (place-on-cell-ok? cell card-n cards)
     [:tableau col] (place-on-tableau-ok? col card-n cards)
     _ (error (fmt "unmatched can-place-on? %s %s" (inspect slot col-n)))))
 

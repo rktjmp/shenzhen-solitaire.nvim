@@ -122,7 +122,7 @@
             (logic.move-cards-ok? state [:cell 1 1] [:foundation 1 1])))
   (test "only accepts one card"
     (tset state :tableau 1 [[:COIN 2] [:STRING 1]])
-    (must match [:err "may only place one card on a foundation"]
+    (must match [:err "may only place one card at a time on a foundation"]
           (logic.move-cards-ok? state [:tableau 1 1] [:foundation 1 1])))
   (test "only accepts flower on flower foundation"
       (tset state :cell 1 [[:FLOWER 0]])
