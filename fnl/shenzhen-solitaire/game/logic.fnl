@@ -122,8 +122,7 @@
         (if (valid-sequence? hand) true (values nil "may only collect alternating suit descending sequences")))
       ;; ERR out of bounds
       (where [:tableau [card & _]] (< (length col) card-n))
-      (values nil (fmt "unable to collect from %s.%d.%d because it over runs length")
-              slot col-n card-n)
+      (values nil (fmt "unable to collect from %s.%d.%d because it over runs length" slot col-n card-n))
       ;; OK you can always pick up one card from a cell
       (where [:cell [card]] (= card-n 1)) true
       (where [:cell [card]] (< 1 card-n)) (values nil "cant collect over the first card in a cell")
@@ -167,12 +166,20 @@
             ;; ERR more than one card
             (where [_ [card & rest]] (< 0 (length rest))) (values nil "can only place one card on a cell"))))
 
-(fn place-on-tableau-ok? [column cards]
-  (r/let [t-card (. column (length column))
+(fn place-on-tableau-ok? [column card-n cards]
+  ;; we can place on the tableau at the end the col only
+  (r/let [col-len (length column)
+          ;; can only drop after the last card
+          _ (if (not (= card-n (+ 1 col-len)))
+              (values nil "must place at end of column"))
+          ;; now check that top-card + cards is a valid sequence
+          t-card (. column col-len)
           ;; may be [nil] -> [] + cards
           new-seq (enum.append$ [t-card] (unpack cards))]
     (match [t-card (valid-sequence? new-seq)]
       ;; you can always put cards down in vacant columns
+      ;; note: we skip the seq check here so dragon placements work even though
+      ;; they don't create a sequence
       [nil _] true
       ;; otherwise we must be making a valid sequence
       [_ true] true
@@ -180,9 +187,12 @@
 
 (fn M.can-place-ok? [state [slot col-n card-n] cards]
   (match [slot (. state slot col-n)]
+    ;; TODO +1 end of col
     [:foundation foundation] (place-on-foundation-ok? foundation cards (= col-n 4))
+    ;; TODO +1 end of col
     [:cell cell] (place-on-cell-ok? cell cards)
-    [:tableau col] (place-on-tableau-ok? col cards)
+    ;; DONE +1 end of col
+    [:tableau col] (place-on-tableau-ok? col card-n cards)
     _ (error (fmt "unmatched can-place-on? %s %s" (inspect slot col-n)))))
 
 ;;; External Commands

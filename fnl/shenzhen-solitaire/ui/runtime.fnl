@@ -41,31 +41,49 @@
   ;; TODO sort this so the first valid move is directly after the current
   ;; cursor.
   ;; TODO 'hard' mode where this isn't validated?
-  (fn map-locations [f]
-    ;; we can check every card location, plus empty slot base locations
-    (-> (E.flat-map [:tableau :cell :foundation]
-                    (fn [_ slot]
-                      (E.flat-map (. game :game-state slot)
-                                  (fn [col-n col]
-                                    (E.map col (fn [card-n] (if (not (= 1 card-n))
-                                                              [slot col-n card-n])))))))
-        (E.concat$ (E.map #(iter/range 1 8) #[:tableau $1 1]))
-        (E.concat$ (E.map #(iter/range 1 4) #[:foundation $1 1]))
-        (E.concat$ (E.map #(iter/range 1 3) #[:cell $1 1]))
-        (E.map #(f $2))))
+  (fn valid-locations-for-pickup [game]
+    ;; for pickup we want to check every card on the table
+    (let [fm E.flat-map
+          map E.map]
+      (fm [:tableau :cell :foundation]
+          (fn [_ slot]
+            (fm (. game :game-state slot)
+                (fn [col-n col]
+                  (map col (fn [card-n]
+                             [slot col-n card-n]))))))))
+  (fn valid-locations-for-putdown [game]
+    ;; for put down we need to check the card positions *after* the last card
+    ;; in every slotxcol, as well as any 1 1 of empty columns.
+    (let [{: game-state} game
+          head-or-tail (fn [slot col-n]
+                         (match (. game-state slot col-n)
+                           (where col (<= 1 (length col))) [slot col-n (+ 1 (length col))]
+                           (where col (= 0 (length col))) [slot col-n 1]))]
+      (-> []
+          (E.concat$ (E.map #(iter/range 1 8) #(head-or-tail :tableau $1)))
+          (E.concat$ (E.map #(iter/range 1 4) #(head-or-tail :foundation $1)))
+          (E.concat$ (E.map #(iter/range 1 3) #(head-or-tail :cell $1))))))
+
   (let [{: game-state} game
         {: hand : hand-from} game-state
-        check-fn (match hand
-                    [nil] #(logic.collect-from-ok? game-state $1)
-                    [cards] #(logic.can-place-ok? game-state $1 cards))
-        locations (-> (map-locations #[(check-fn $1) $1])
+        checked-locations (match hand
+                            [nil] (E.map (valid-locations-for-pickup game)
+                                         #[(logic.collect-from-ok? game-state $2) $2])
+                            [cards] (E.map (valid-locations-for-putdown game)
+                                           #[(logic.can-place-ok? game-state $2 cards) $2]))
+        locations (-> checked-locations
                       ;; TODO collect-from-ok? returns result<location> instead of result<true>?
                       ;; allow replacing the taken card 
                       (E.append$ (match hand-from
-                                   [slot col card] [[:ok true] [slot col (math.max 1 (- card 1))]]
+                                   [slot col card] [[:ok true] [slot col (math.max 1 card)]]
                                    _ [[:err :x] :x]))
                       (E.filter #(match $2 [[:ok] location] true))
-                      (E.map #(match $2 [_ location] location)))]
+                      (E.map #(match $2 [_ location] location))
+                      (E.sort$ (fn [[slot-1 col-1 card-1] [slot-2 col-2 card-2]]
+                                 (let [slot-val {:tableau 1000 :cell 2000 :foundation 3000}
+                                       sum-1 (+ (. slot-val slot-1) (* 100 col-1) (* 10 card-1))
+                                       sum-2 (+ (. slot-val slot-2) (* 100 col-2) (* 10 card-2))]
+                                   (< sum-1 sum-2)))))]
     (tset game-state :valid-locations locations)))
 
 (fn m.draw-game [game]
@@ -88,6 +106,7 @@
         next-location (match valid-locations
                         [nil] cursor
                         list (. valid-locations next-index))]
+    (inspect! :next-loc current-index next-index next-location)
     (tset game :game-state :cursor next-location)
     (m.draw-game game)))
 
@@ -111,7 +130,7 @@
   ;; just pick up for now
   (let [{: game-state } game
         {: logic-state} game
-        {: cursor : hand} game-state]
+        {: cursor : hand : hand-from} game-state]
     (match hand
       ;; pick up is checked against logic state as we have had no effect yet
       [nil] (match (logic.collect-from-ok? logic-state cursor)
@@ -120,20 +139,28 @@
                       (tset game-state slot col-n rem)
                       (tset game-state :hand [hand])
                       (tset game-state :hand-from cursor)
-                      (tset game-state :cursor [slot col-n (math.max 1 (- card-n 1))])
                       (tset game :game-state game-state))
               [:err e] (error e))
       ;; place is checked against game state as we have technically altered it
-      [cards] (match (logic.can-place-ok? game-state cursor cards)
-                [:ok] (let [{: hand-from} game-state
-                            new-logic-state (logic.move-cards logic-state hand-from cursor)
-                            new-game-state (m.game-state<-logic-state game-state new-logic-state)]
-                        (tset new-game-state :hand [])
-                        (tset new-game-state :hand-from [])
-                        (doto game
-                          (tset :game-state new-game-state)
-                          (tset :logic-state new-logic-state)))
-                [:err e] (error e)))
+      ;; kinda ugly hack so we can place back where we piced up even if it
+      ;; makes an invalid sequence
+      [cards] (match [cursor hand-from (logic.can-place-ok? game-state cursor cards)]
+                ;; trying to put down where we pickd up, don't do any checks, just revert the state
+                [[s cl cd] [s cl cd] _] (let [game-state (doto game-state
+                                                           (tset :hand [])
+                                                           (tset :hand-from []))
+                                              new-game-state (m.game-state<-logic-state game-state logic-state)]
+                                          (tset game :game-state new-game-state))
+                [_ _ [:ok]]
+                (let [{: hand-from} game-state
+                      new-logic-state (logic.move-cards logic-state hand-from cursor)
+                      new-game-state (m.game-state<-logic-state game-state new-logic-state)]
+                  (tset new-game-state :hand [])
+                  (tset new-game-state :hand-from [])
+                  (doto game
+                    (tset :game-state new-game-state)
+                    (tset :logic-state new-logic-state)))
+                [_ _ [:err e]] (error e)))
     (m.draw-game game)))
 
 (fn m.handle-event [game event]

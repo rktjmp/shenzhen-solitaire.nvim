@@ -34,7 +34,7 @@
                                :col (+ layout.tableau.gap
                                        (* (- col-n 1)
                                           (+ layout.tableau.gap layout.card.size.width)))}
-      [:cell col-n card-n] {:row (+ layout.cell.pos.row (* (- card-n 1) 2))
+      [:cell col-n card-n] {:row layout.cell.pos.row
                             :col (+ layout.cell.pos.col
                                     layout.cell.gap
                                     (* (- col-n 1)
@@ -52,9 +52,11 @@
                                           layout.foundation.gap
                                           (* (- col-n 1)
                                              (+ layout.foundation.gap layout.card.size.width)))}
-      ;; cursor is as-would be but shifted over
-      [:hand col-n card-n] (let [[slot base-col-n base-card-n] view.cursor
-                                 {: row : col} (game-location->view-pos [slot base-col-n (+ base-card-n card-n)]
+      ;; cursor is as-would be but shifted over, locations for held cards are actually one past
+      ;; the end of the columns, so we must knock back a card for nicer alignment
+      [:hand col-n card-n] (let [[slot cur-col-n cur-card-n] view.cursor
+                                 {: row : col} (game-location->view-pos [slot cur-col-n (-> (- cur-card-n 1)
+                                                                                             (+ card-n))]
                                                                         view)]
                              {:row row :col (+ col 1)})
       _ (error (vim.inspect location)))))
@@ -174,6 +176,14 @@
       (write :draw pos->char)
       (write :color pos->hl)))
 
+  (fn adjust-location-for-pickup-or-putdown [location]
+    ;; valid pickup locations are "on card", valid put down locations are "post
+    ;; card", so the cursor and markers need adjusting up a step
+    (match game-state.hand
+      [nil] location
+      [cards] (let [[slot col-n card-n] location]
+                [slot col-n (math.max 1 (- card-n 1))])))
+
   (let [fbo (frame-buffer.new view.size)
         for-each-game-card #(map-game-state-cards game-state $1)]
     ;; render out card slot placeholders
@@ -187,16 +197,22 @@
           (tset view :cards card :highlight (highlight-name-for-card card))
           (tset view :cards card :pos pos))
         (draw-card fbo (. view :cards card))))
+
+    ;; draw "can move here" markers
     (each [i location (ipairs game-state.valid-locations)]
-      (let [{: row : col} (game-location->view-pos location view)
+      (let [{: row : col} (-> (adjust-location-for-pickup-or-putdown location)
+                              (game-location->view-pos view))
             pos {:row (+ row 1) :col (- col 2)}]
-        (frame-buffer.write fbo :draw pos {:width 1 :height 1} #"▹")
+        (frame-buffer.write fbo :draw pos {:width 1 :height 1} #"▸")
         (frame-buffer.write fbo :color pos {:width 1 :height 1} #:Comment)))
+
     ;; draw cursor
-    (let [{: row : col} (game-location->view-pos game-state.cursor view)
+    (let [{: row : col} (-> (adjust-location-for-pickup-or-putdown game-state.cursor)
+                            (game-location->view-pos view))
           pos {:row (+ row 1) :col (- col 2)}]
       (frame-buffer.write fbo :draw pos {:width 3 :height 1} #(match $2 1 "🯁" 2 "🯂" 3 "🯃"))
       (frame-buffer.write fbo :color pos {:width 3 :height 1} #:Normal))
+
     ;; output frame
     (api.nvim_buf_clear_namespace view.buf-id view.hl-ns 0 -1)
     (vim.api.nvim_buf_set_lines view.buf-id 0 -1 false (enum/map fbo.draw #(table.concat $2 "")))

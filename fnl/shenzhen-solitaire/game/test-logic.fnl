@@ -182,4 +182,4 @@
     (must match [:ok]
           (logic.move-cards-ok? state [:tableau 1 1] [:tableau 8 1]))
     (must match [:err "must create alternating suit descending sequence"]
-          (logic.move-cards-ok? state [:tableau 1 1] [:tableau 2 3]))))
+          (logic.move-cards-ok? state [:tableau 1 1] [:tableau 2 4]))))
