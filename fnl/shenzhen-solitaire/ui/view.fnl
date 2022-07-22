@@ -39,12 +39,12 @@
                                     layout.cell.gap
                                     (* (- col-n 1)
                                        (+ layout.cell.gap layout.card.size.width)))}
-      [:foundation 4 card-n] {:row (+ layout.foundation.pos.row (* (- card-n 1) 2))
+      [:foundation 4 card-n] {:row layout.foundation.pos.row
                               :col (+ layout.foundation.gap
                                       layout.foundation.pos.col
                                       (* (- 1 1)
                                          (+ layout.foundation.gap layout.card.size.width)))}
-      [:foundation col-n card-n] {:row (+ layout.foundation.pos.row (* (- card-n 1) 2))
+      [:foundation col-n card-n] {:row layout.foundation.pos.row
                                   :col (+ layout.foundation.gap
                                           layout.foundation.pos.col
                                           ;; shift from flower
