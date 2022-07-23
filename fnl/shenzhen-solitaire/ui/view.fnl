@@ -122,7 +122,7 @@
       (set-km :prev-location "Move to previous location")
       (set-km :move-right "Move right")
       (set-km :move-left "Move left")
-      (set-km :pick-up-put-down "Pick up or Put down")))
+      (set-km :interact "Pick up, put down, interact")))
 
   (let [real-buf-id buf-id
         ;; This view is strictly a configuration container and should not

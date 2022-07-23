@@ -99,22 +99,27 @@
                                           (fn [i key]
                                             (if (. game-state :lockable-dragons (.. key :?))
                                               [:LOCK-DRAGON 1 i])))
-                                   []))
-                      (inspect!))]
+                                   [])))]
     (values locations)))
 
-(fn m.draw-game [game]
+(fn m.tick-game [game]
   (fn check-lock [dragon-name]
     (match (logic.lock-dragons-ok? game.logic-state dragon-name)
       [:ok] true
       _ false))
-  (let [valid-locations (m.generate-valid-locations game)
+  ;; TODO HACK, some semi race here where valid locations needs to check lockable-dragons
+  ;; to set the button location, so this order matters for now...
+  (let [{: view : game-state} game
         lockable-dragons {:DRAGON-GREEN? (check-lock :DRAGON-GREEN)
                           :DRAGON-RED? (check-lock :DRAGON-RED)
                           :DRAGON-WHITE? (check-lock :DRAGON-WHITE)}
-        {: view : game-state} game]
-    (tset game-state :valid-locations valid-locations)
-    (tset game-state :lockable-dragons lockable-dragons)
+        _ (tset game-state :lockable-dragons lockable-dragons)
+        valid-locations (m.generate-valid-locations game)
+        _ (tset game-state :valid-locations valid-locations)]
+    (values game)))
+
+(fn m.draw-game [game]
+  (let [{: view : game-state} game]
     (ui-view.draw view game-state)))
 
 (fn shift-location [game event direction]
@@ -143,21 +148,21 @@
 (fn m.prev-location [game event]
   (shift-location game event :prev))
 
-(fn m.pick-up-put-down [game event]
+(fn m.interact [game event]
   (let [{: game-state } game
         {: logic-state} game
         {: cursor : hand : hand-from} game-state]
-    (inspect! :cursor cursor)
     ;; TODO HACK button hack ...
     (match [hand cursor]
       [_ [:LOCK-DRAGON 1 button]] (let [which (match button 1 :DRAGON-RED 2 :DRAGON-GREEN 3 :DRAGON-WHITE)]
                                     (match (logic.lock-dragons-ok? logic-state which)
-                                      [:ok] (let [new-logic-state (logic.lock-dragons logic-state which)
-                                                  new-game-state (m.game-state<-logic-state game-state
-                                                                                            new-logic-state)]
-                                              (doto game
-                                                (tset :game-state new-game-state)
-                                                (tset :logic-state new-logic-state)))
+                                      [:ok {: to}]
+                                      (let [new-logic-state (logic.lock-dragons logic-state which)
+                                            new-game-state (m.game-state<-logic-state game-state new-logic-state)]
+                                        (tset new-game-state :cursor to)
+                                        (doto game
+                                          (tset :game-state new-game-state)
+                                          (tset :logic-state new-logic-state)))
                                       [:err e] (error e)))
       ;; pick up is checked against logic state as we have had no effect yet
       [[nil] _] (match (logic.collect-from-ok? logic-state cursor)
@@ -210,13 +215,12 @@
       ;; TODO missing file does what
       (let [bytes (fin:read :*a)
             events (vim.mpack.decode bytes)
-            _ (inspect! :events events)
             new-logic-state (E.reduce events (logic.S.empty-state) #(logic.S.apply $1 $3))
             new-game-state (m.game-state<-logic-state {} new-logic-state)]
-        (inspect! :logic new-logic-state)
-        (inspect! :game new-game-state)
         (tset game :logic-state new-logic-state)
-        (tset game :game-state new-game-state)))))
+        (tset game :game-state new-game-state)
+        (m.tick-game game)
+        (m.draw-game game)))))
 
 (fn m.handle-event [game event]
   (let [{: name} event]
@@ -226,6 +230,7 @@
           ;; its's also assumed that events are dirty disgusting things that
           ;; may modify any data without passing it back.
           (f game event)
+          (m.tick-game game)
           (m.draw-game game))
       nil (error (string.format "no handler for %s" name)))))
 
@@ -253,7 +258,7 @@
                               :move-left :m
                               :move-up :i
                               :move-down :n
-                              :pick-up-put-down :y
+                              :interact :y
                               :cancel :q
                               :save-game :szw
                               :load-game :szl
@@ -281,6 +286,7 @@
     (set current-game {:logic-state logic-state
                        :game-state game-state
                        :view view}))
+    (m.tick-game current-game)
     (m.draw-game current-game)
     (values current-game))
 
