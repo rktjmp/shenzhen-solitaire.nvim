@@ -60,6 +60,15 @@
                                                                                              (+ card-n))]
                                                                         view)]
                              {:row row :col (+ col 1)})
+      ;; UGLY HACK TODO
+      ;; we use this to work out where to put the cursor, but the adjustments here are
+      ;; to shift the cursor up rows to align with the buttons which are drawn differently.
+      [:LOCK-DRAGON _ button] (let [{: row : col} view.layout.buttons.pos]
+                                (match button
+                                  1 {:row (+ row) : col}
+                                  2 {:row (+ row 1) : col}
+                                  3 {:row (+ row 2) : col}))
+
       _ (error (vim.inspect location)))))
 
 (fn map-game-state-cards [game-state f]

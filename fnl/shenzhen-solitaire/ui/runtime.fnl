@@ -66,6 +66,7 @@
 
   (let [{: game-state} game
         {: hand : hand-from} game-state
+        holding? (match hand [nil] false [cards] true)
         checked-locations (match hand
                             [nil] (E.map (valid-locations-for-pickup game)
                                          #[(logic.collect-from-ok? game-state $2) $2])
@@ -90,7 +91,16 @@
                                    (match [a b]
                                      [[s c x] [s c y]] (< x y)
                                      [[s x _] [s y _]] (< x y)
-                                     [[x _ _] [y _ _]] (< x y))))))]
+                                     [[x _ _] [y _ _]] (< x y)))))
+                      ;; TODO Questionable decision to smush buttons here as "positions"
+                      ;; TODO: only when hand is empty
+                      (E.concat$ (if (not holding?)
+                                   (E.map [:DRAGON-RED :DRAGON-GREEN :DRAGON-WHITE]
+                                          (fn [i key]
+                                            (if (. game-state :lockable-dragons (.. key :?))
+                                              [:LOCK-DRAGON 1 i])))
+                                   []))
+                      (inspect!))]
     (values locations)))
 
 (fn m.draw-game [game]
@@ -137,9 +147,20 @@
   (let [{: game-state } game
         {: logic-state} game
         {: cursor : hand : hand-from} game-state]
-    (match hand
+    (inspect! :cursor cursor)
+    ;; TODO HACK button hack ...
+    (match [hand cursor]
+      [_ [:LOCK-DRAGON 1 button]] (let [which (match button 1 :DRAGON-RED 2 :DRAGON-GREEN 3 :DRAGON-WHITE)]
+                                    (match (logic.lock-dragons-ok? logic-state which)
+                                      [:ok] (let [new-logic-state (logic.lock-dragons logic-state which)
+                                                  new-game-state (m.game-state<-logic-state game-state
+                                                                                            new-logic-state)]
+                                              (doto game
+                                                (tset :game-state new-game-state)
+                                                (tset :logic-state new-logic-state)))
+                                      [:err e] (error e)))
       ;; pick up is checked against logic state as we have had no effect yet
-      [nil] (match (logic.collect-from-ok? logic-state cursor)
+      [[nil] _] (match (logic.collect-from-ok? logic-state cursor)
               [:ok] (let [[slot col-n card-n] cursor
                           (rem hand) (E.split (. game-state slot col-n) card-n)]
                       (tset game-state slot col-n rem)
@@ -150,7 +171,7 @@
       ;; place is checked against game state as we have technically altered it
       ;; kinda ugly hack so we can place back where we piced up even if it
       ;; makes an invalid sequence
-      [cards] (match [cursor hand-from (logic.can-place-ok? game-state cursor cards)]
+      [[cards] _] (match [cursor hand-from (logic.can-place-ok? game-state cursor cards)]
                 ;; trying to put down where we pickd up, don't do any checks, just revert the state
                 [[s cl cd] [s cl cd] _]
                 (let [game-state (doto game-state
@@ -248,6 +269,7 @@
       (tset :cursor (or game-state.cursor [:tableau 1 5]))
       (tset :hand (or game-state.hand []))
       (tset :hand-from (or game-state.hand-from []))
+      (tset :lockable-dragons (or game-state.lockable-dragons []))
       (tset :valid-locations (or game-state.valid-locations [])))))
 
 (fn M.start-new-game [buf-id seed]
