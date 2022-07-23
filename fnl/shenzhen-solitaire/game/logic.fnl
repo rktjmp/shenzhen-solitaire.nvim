@@ -34,12 +34,6 @@
   (let [[slot col-n card-n] location]
     (?. state slot col-n card-n)))
 
-(fn alter-location [state location cards]
-  (let [[slot-name col-n card-n] location]
-    (each [i card (ipairs cards)]
-      (tset state slot-name col-n (+ card-n (- i 1)) card)))
-  (values state))
-
 (fn S.empty-state [id seed]
   {:game-id id
    ;; game stuff
@@ -122,9 +116,11 @@
 (fn handlers.locked-dragons [state {:name dragon-name :from dragon-locations :to cell-location}]
   (let [dragon-cards (enum.map dragon-locations #(location->card state $2))]
     ;; clear dragon locations
-    (enum.map dragon-locations #(alter-location state $2 []))
+    (enum.map dragon-locations #(let [[slot-name col-n card-n] $2]
+                                  (tset state slot-name col-n card-n nil)))
     ;; collect cards
-    (alter-location state cell-location dragon-cards)
+    (let [[slot col _] cell-location]
+      (tset state slot col dragon-cards))
     (values state)))
 
 (local M {})
