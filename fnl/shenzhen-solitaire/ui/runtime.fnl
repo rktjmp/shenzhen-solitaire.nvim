@@ -172,6 +172,31 @@
                 [_ _ [:err e]] (error e)))
     (values game)))
 
+(local path-separator (string.match package.config "(.-)\n"))
+(lambda join-path [head ...]
+  (accumulate [t head _ part (ipairs [...])]
+              (.. t path-separator part)))
+
+(fn m.save-game [game event]
+  (let [save-file (join-path (vim.fn.stdpath :cache) :shenzhen-solitaire.save)]
+    (with-open [fout (io.open save-file :w)]
+      (fout:write (vim.mpack.encode game.logic-state.events))
+      (vim.notify "Saved game"))))
+
+(fn m.load-game [game event]
+  (let [save-file (join-path (vim.fn.stdpath :cache) :shenzhen-solitaire.save)]
+    (with-open [fin (io.open save-file)]
+      ;; TODO missing file does what
+      (let [bytes (fin:read :*a)
+            events (vim.mpack.decode bytes)
+            _ (inspect! :events events)
+            new-logic-state (E.reduce events (logic.S.empty-state) #(logic.S.apply $1 $3))
+            new-game-state (m.game-state<-logic-state {} new-logic-state)]
+        (inspect! :logic new-logic-state)
+        (inspect! :game new-game-state)
+        (tset game :logic-state new-logic-state)
+        (tset game :game-state new-game-state)))))
+
 (fn m.handle-event [game event]
   (let [{: name} event]
     (match (. m name)
@@ -186,6 +211,7 @@
 
 (local default-config {:card {:size {:width 7 :height 5}
                               :borders {:ne :╮ :nw :╭ :se :╯ :sw :╰ :n :─ :s :─ :e :│ :w :│}}
+                       :buttons {:pos {:row 1 :col 34}}
                        :tableau {:pos {:row 7 :col 1}
                                  :gap 3}
                        :cell {:pos {:row 1
@@ -208,6 +234,8 @@
                               :move-down :n
                               :pick-up-put-down :y
                               :cancel :q
+                              :save-game :szw
+                              :load-game :szl
                               :next-location :<Tab>
                               :prev-location :<S-Tab>}})
 
@@ -236,5 +264,5 @@
 
 (values M)
 
-(M.start-new-game 133 1)
+(M.start-new-game 133)
 (values nil)

@@ -106,6 +106,8 @@
                                       :list false
                                       :relativenumber false}]
                             (enum/map opts #(api.nvim_win_set_option win-id $1 $2))))
+      (set-km :save-game "Save current game")
+      (set-km :load-game "Load last saved game")
       (set-km :next-location "Move to next location")
       (set-km :prev-location "Move to previous location")
       (set-km :move-right "Move right")
@@ -139,8 +141,8 @@
                   :borders config.card.borders
                   :highlight hl}]
         [game-card (ui-card.new game-card data)]))
-    (tset view :cards (-> (map-game-state-cards game-state game-card->ui-card)
-                          (enum/pairs->table)))
+    ; (tset view :cards (-> (map-game-state-cards game-state game-card->ui-card)
+    ;                       (enum/pairs->table)))
     (tset view :placeholders (-> [(enum/map #(iter/range 1 8) #[:tableau $1 1])
                                   (enum/map #(iter/range 1 3) #[:cell $1 1])
                                   (enum/map #(iter/range 1 4) #[:foundation $1 1])]
@@ -152,6 +154,20 @@
     (define-highlight-groups config.highlight)
     (configure-buffer view)
     (values view)))
+
+(fn game-card->ui-card [view game-card location]
+  "Cards are effectively singletons both in the logic and in the UI, so we can
+  stably generate a map of game-cards - really just a type, value and an
+  abstract position somewhere - and ui cards - which have a more definite
+  position on the screen as well as additional data such as symbols and
+  colors."
+  (let [pos (game-location->view-pos location view)
+        hl (highlight-name-for-card game-card)
+        data {:pos pos
+              :size view.layout.card.size
+              :borders view.layout.card.borders
+              :highlight hl}]
+    [game-card (ui-card.new game-card data)]))
 
 (fn M.draw [view game-state tick?]
   "Render out a games state."
@@ -191,6 +207,11 @@
     ;; update our ui-card positions to reflect where they are in the game state
     ;; render cards out according to the tableau, so that's left to right top to
     ;; bottom, this gives us the correct z-indexing
+
+    ;; HACK TODO remove this, needed wor when we load a game and the cards
+    ;; lookup holds references to older cards
+    (tset view :cards (-> (map-game-state-cards game-state #(game-card->ui-card view $...))
+                          (enum/pairs->table)))
     (for-each-game-card
       (fn [card location]
         (let [pos (game-location->view-pos location view)]
