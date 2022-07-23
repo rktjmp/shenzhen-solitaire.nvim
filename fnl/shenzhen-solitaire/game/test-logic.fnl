@@ -86,6 +86,13 @@
     (must match [:err "can only place into an empty cell"]
                 (logic.move-cards-ok? state [:cell 1 1] [:cell 2 1]))))
 
+(suite "collect-from-ok?"
+  [state (playable-state)]
+  (test "cant move dddd cell"
+    [_ (tset state :cell 1 [[:DRAGON-RED 0 ] [:DRAGON-RED 0] [:DRAGON-RED 0] [:DRAGON-RED 0]])]
+    (must match [:err "cant collect from locked cells"]
+          (logic.collect-from-ok? state [:cell 1 1]))))
+
 (suite "interacting with foundation"
   [state (playable-state)]
   (test "cant put card at 1 1 if there is a card at 1 1 or 1 2")

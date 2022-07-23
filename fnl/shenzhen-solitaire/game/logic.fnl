@@ -148,7 +148,12 @@
       (where [:tableau [card & _]] (< (length col) card-n))
       (values nil (fmt "unable to collect from %s.%d.%d because it over runs length" slot col-n card-n))
       ;; OK you can always pick up one card from a cell
-      (where [:cell [card]] (= card-n 1)) true
+      (where [:cell [card]] (= card-n 1))
+      (let [cell (. state slot col-n)]
+       (match cell
+        [any nil] true
+        [a b c d nil] (values nil "cant collect from locked cells")
+        _ (error "internal logic error")))
       (where [:cell [card]] (< 1 card-n)) (values nil "cant collect over the first card in a cell")
       ;; ERR catch all else
       _ (error (fmt "unmatched collect request: %s.%d %d" slot col-n card-n)))))
