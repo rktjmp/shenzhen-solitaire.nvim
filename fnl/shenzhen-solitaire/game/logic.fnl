@@ -5,8 +5,10 @@
       : suited-card?
       : dragon-card?
       : flower-card?
+      : card-type
       : valid-sequence?} :shenzhen-solitaire.game.deck
      {:format fmt} string
+     {: range} :shenzhen-solitaire.lib.donut.iter :ns iter
      enum :shenzhen-solitaire.lib.donut.enum
      {: inspect! : inspect} :shenzhen-solitaire.lib.donut.inspect
      {: nil?} :shenzhen-solitaire.lib.donut.type
@@ -20,6 +22,23 @@
 
 ;; for now the handlers will live on this table but probably could go in S
 (local handlers {})
+
+(fn generate-locations [state opts]
+  (enum.flat-map opts
+                 (fn [slot [from to]]
+                   (enum.map #(iter/range from to)
+                             #[slot $1 (math.max 1 (length (. state slot $1)))]))))
+
+(fn location->card [state location]
+  ;; TODO: worth exposing this? check location valid?
+  (let [[slot col-n card-n] location]
+    (?. state slot col-n card-n)))
+
+(fn alter-location [state location cards]
+  (let [[slot-name col-n card-n] location]
+    (each [i card (ipairs cards)]
+      (tset state slot-name col-n (+ card-n (- i 1)) card)))
+  (values state))
 
 (fn S.empty-state [id seed]
   {:game-id id
@@ -100,6 +119,14 @@
       (tset from-slot from-col-n left-over-from)
       (tset to-slot to-col-n (enum.concat$ [] (. state to-slot to-col-n) hand)))))
 
+(fn handlers.locked-dragons [state {:name dragon-name :from dragon-locations :to cell-location}]
+  (let [dragon-cards (enum.map dragon-locations #(location->card state $2))]
+    ;; clear dragon locations
+    (enum.map dragon-locations #(alter-location state $2 []))
+    ;; collect cards
+    (alter-location state cell-location dragon-cards)
+    (values state)))
+
 (local M {})
 
 (fn M.collect-from-ok? [state [slot col-n card-n]]
@@ -118,8 +145,9 @@
       ;; OK/ERR but more than one card must be a valid sequence
       (where [:tableau [card & _]] (< 0 card-n (length col)))
       (let [(rem hand) (enum.split col card-n)]
-        ; (inspect! card-n rem hand)
-        (if (valid-sequence? hand) true (values nil "may only collect alternating suit descending sequences")))
+        (if (valid-sequence? hand)
+          true
+          (values nil "may only collect alternating suit descending sequences")))
       ;; ERR out of bounds
       (where [:tableau [card & _]] (< (length col) card-n))
       (values nil (fmt "unable to collect from %s.%d.%d because it over runs length" slot col-n card-n))
@@ -247,7 +275,8 @@
               ;; illegal, more of a no-op and allowing it lets us pickup a card
               ;; in and put it back down in the same place if it has no valid
               ;; moves.
-              ;; _ (move-logical-ok? from to)
+              ;; TODO: I would like to re-enable this check probably
+              ; _ (move-logical-ok? from to)
               _ (location-resolves-ok? :from from)
               _ (location-resolves-ok? :to to true)
               [from-slot from-col-n from-card-n] from
@@ -262,7 +291,7 @@
         ;; get here but we will exercise the check anyway
         ; (inspect! :can-collect? can-collect? :can-place? can-place?)
         (if (and can-collect? can-place?)
-          (R.ok true)
+          (R.ok {: from : to})
           (R.err "unable proceed, this was unexpected, please log an issue")))))
 
 (fn M.start-new-game [?seed]
@@ -287,15 +316,26 @@
 
   Giving a number (x) between 1 and n moves all cards from x to n."
   (-> (M.move-cards-ok? state from to)
-      (R.map #(S.apply state [:moved-cards {: from : to}]))
+      (R.map #(S.apply state [:moved-cards $1]))
       (R.unwrap!)))
 
+(fn M.lock-dragons-ok? [state dragon-name]
+  (let [dragon-locations (-> (generate-locations state {:tableau [1 8] :cell [1 3]})
+                             (enum.filter #(match (location->card state $2)
+                                             [dragon-name _] true)))
+        cell-location (-> (generate-locations state {:cell [1 3]})
+                          (enum.filter #(nil? (location->card state $2)))
+                          (enum.hd))
+        n-locs (length dragon-locations)]
+    (match [(= 4 n-locs) (not (nil? cell-location))]
+      [true true]  (R.ok {:name dragon-name :from dragon-locations :to cell-location})
+      [false _] (R.err (fmt "need 4 dragons to lock, found %d %s" n-locs dragon-name))
+      [true false] (R.err (fmt "no free cell")))))
+
 (fn M.lock-dragons [state dragon-name]
-  ;; search tableau and cells for dragon cards matching name
-  ;; tableau cards must be at the end of the stack
-  ;; must have empty cell
-  ;; if we have 4, we can lock the dragons by moving all to the lowest unoccupied cell
-  (error :not-implemented))
+  (-> (M.lock-dragons-ok? state dragon-name)
+      (R.map #(S.apply state [:locked-dragons $1]))
+      (R.unwrap!)))
 
 (fn M.win-game [state]
   (error :not-implemented))

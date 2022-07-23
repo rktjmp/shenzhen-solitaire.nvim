@@ -69,6 +69,16 @@
     [:MYRIAD _] true
     _ false))
 
+(fn M.card-type [card]
+  (match card
+    [t _] t
+    _ (error :not-a-card)))
+
+(fn M.card-value [card]
+  (match card
+    [_ v] v
+    _ (error :not-a-card)))
+
 (fn M.valid-sequence? [stack]
   "Does the given stack alternate in suit and decrement in value?"
   ;; check run would be valid

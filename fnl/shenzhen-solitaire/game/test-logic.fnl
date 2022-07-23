@@ -183,3 +183,47 @@
           (logic.move-cards-ok? state [:tableau 1 1] [:tableau 8 1]))
     (must match [:err "must create alternating suit descending sequence"]
           (logic.move-cards-ok? state [:tableau 1 1] [:tableau 2 4]))))
+
+(suite "locking dragons"
+  [state (playable-state)]
+  (unpack (icollect [n k (pairs {:green :DRAGON-GREEN :red :DRAGON-RED :white :DRAGON-WHITE})]
+      (test (string.format "will lock for %s dragon" n)
+        [_ (tset state :tableau 1 [[k 0]])
+         _ (tset state :tableau 2 [[k 0]])
+         _ (tset state :tableau 3 [[k 0]])
+         _ (tset state :tableau 4 [[k 0] [:MYRIAD 1]])
+         _ (tset state :tableau 5 [])
+         _ (tset state :tableau 6 [])
+         _ (tset state :tableau 7 [])
+         _ (tset state :tableau 8 [])]
+        (must match [:err] (logic.lock-dragons-ok? state k))
+        (tset state :tableau 4 [[k 0]])
+        (must match [:ok] (logic.lock-dragons-ok? state k))
+        (let [state (logic.lock-dragons state k)]
+          (must match [[k 0] [k 0] [k 0] [k 0] nil] (. state :cell 1))))))
+  (test "puts dragons in left most unoccupied cell"
+    [_ (tset state :tableau 1 [[:DRAGON-RED 0]])
+     _ (tset state :tableau 2 [[:DRAGON-RED 0]])
+     _ (tset state :tableau 3 [[:DRAGON-RED 0]])
+     _ (tset state :tableau 4 [[:DRAGON-RED 0]])
+     _ (tset state :tableau 5 [])
+     _ (tset state :tableau 6 [])
+     _ (tset state :tableau 7 [])
+     _ (tset state :tableau 8 [])
+     _ (tset state :cell 1 [[:MYRIAD 1]])
+     state (logic.lock-dragons state :DRAGON-RED)]
+    (must match [[:MYRIAD 1] nil] (. state :cell 1))
+    (must match [[:DRAGON-RED 0] [:DRAGON-RED 0] [:DRAGON-RED 0] [:DRAGON-RED 0] nil] (. state :cell 2)))
+  (test "cant lock if no cells are free"
+    [_ (tset state :tableau 1 [[:DRAGON-RED 0]])
+     _ (tset state :tableau 2 [[:DRAGON-RED 0]])
+     _ (tset state :tableau 3 [[:DRAGON-RED 0]])
+     _ (tset state :tableau 4 [[:DRAGON-RED 0]])
+     _ (tset state :tableau 5 [])
+     _ (tset state :tableau 6 [])
+     _ (tset state :tableau 7 [])
+     _ (tset state :tableau 8 [])
+     _ (tset state :cell 1 [[:MYRIAD 1]])
+     _ (tset state :cell 2 [[:MYRIAD 2]])
+     _ (tset state :cell 3 [[:MYRIAD 3]])]
+    (must match [:err "no free cell"] (logic.lock-dragons-ok? state :DRAGON-RED))))
