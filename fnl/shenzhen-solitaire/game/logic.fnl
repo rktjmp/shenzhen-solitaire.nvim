@@ -324,7 +324,11 @@
                              (enum.filter #(match (location->card state $2)
                                              [dragon-name _] true)))
         cell-location (-> (generate-locations state {:cell [1 3]})
-                          (enum.filter #(nil? (location->card state $2)))
+                          (enum.filter #(match (location->card state $2)
+                                          ;; can stack on same dragon, or empty
+                                          [dragon-name _] true
+                                          [any _] false
+                                          nil true))
                           (enum.hd))
         n-locs (length dragon-locations)]
     (match [(= 4 n-locs) (not (nil? cell-location))]

@@ -214,6 +214,18 @@
      state (logic.lock-dragons state :DRAGON-RED)]
     (must match [[:MYRIAD 1] nil] (. state :cell 1))
     (must match [[:DRAGON-RED 0] [:DRAGON-RED 0] [:DRAGON-RED 0] [:DRAGON-RED 0] nil] (. state :cell 2)))
+  (test "can lock if cells are occupied by dragon"
+    [_ (tset state :tableau 1 [[:DRAGON-RED 0]])
+     _ (tset state :tableau 2 [[:DRAGON-RED 0]])
+     _ (tset state :tableau 3 [[:DRAGON-RED 0]])
+     _ (tset state :tableau 4 [])
+     _ (tset state :tableau 5 [])
+     _ (tset state :tableau 6 [])
+     _ (tset state :tableau 7 [])
+     _ (tset state :tableau 8 [])
+     _ (tset state :cell 1 [[:DRAGON-RED 0]])
+     state (logic.lock-dragons state :DRAGON-RED)]
+    (must match [[:DRAGON-RED 0] [:DRAGON-RED 0] [:DRAGON-RED 0] [:DRAGON-RED 0] nil] (. state :cell 1)))
   (test "cant lock if no cells are free"
     [_ (tset state :tableau 1 [[:DRAGON-RED 0]])
      _ (tset state :tableau 2 [[:DRAGON-RED 0]])
