@@ -21,6 +21,7 @@
 (tset package.loaded :shenzhen-solitaire.ui.card nil)
 (tset package.loaded :shenzhen-solitaire.ui.view nil)
 (tset package.loaded :shenzhen-solitaire.game.logic nil)
+(tset package.loaded :shenzhen-solitaire.game.deck nil)
 
 (import-macros {: use} :shenzhen-solitaire.lib.donut.use)
 
@@ -72,26 +73,38 @@
                                            #[(logic.can-place-ok? game-state $2 cards) $2]))
         ;; dont insert duplicate position if hand is same as one we generate
         ugly (match hand-from
-               [h-slot h-col h-card] #(if (accumulate [f true _ [_ [slot col card]] (ipairs $1) :until (not f)]
-                                            (match [h-slot h-col h-card] [slot col card] false _ true))
-                                        (E.append$ $1 [[:ok true] hand-from])
-                                        (values $1))
+               [h-slot h-col h-card]
+               #(if (accumulate [f true _ [_ [slot col card]] (ipairs $1) :until (not f)]
+                        (match [h-slot h-col h-card] [slot col card] false _ true))
+                  (E.append$ $1 [[:ok true] hand-from])
+                  (values $1))
                _ #$1)
         locations (-> checked-locations
-                      (ugly)
                       (E.filter #(match $2 [[:ok] location] true))
+                      (ugly)
                       (E.map #(match $2 [_ location] location))
                       (E.sort$ (fn [[slot-1 col-1 card-1] [slot-2 col-2 card-2]]
                                  (let [slot-val {:tableau 1000 :cell 2000 :foundation 3000}
-                                       sum-1 (+ (. slot-val slot-1) (* 100 col-1) (* 10 card-1))
-                                       sum-2 (+ (. slot-val slot-2) (* 100 col-2) (* 10 card-2))]
-                                   (< sum-1 sum-2)))))]
+                                       a [(. slot-val slot-1) col-1 card-1]
+                                       b [(. slot-val slot-2) col-2 card-2]]
+                                   (match [a b]
+                                     [[s c x] [s c y]] (< x y)
+                                     [[s x _] [s y _]] (< x y)
+                                     [[x _ _] [y _ _]] (< x y))))))]
     (values locations)))
 
 (fn m.draw-game [game]
+  (fn check-lock [dragon-name]
+    (match (logic.lock-dragons-ok? game.logic-state dragon-name)
+      [:ok] true
+      _ false))
   (let [valid-locations (m.generate-valid-locations game)
+        lockable-dragons {:DRAGON-GREEN? (check-lock :DRAGON-GREEN)
+                          :DRAGON-RED? (check-lock :DRAGON-RED)
+                          :DRAGON-WHITE? (check-lock :DRAGON-WHITE)}
         {: view : game-state} game]
     (tset game-state :valid-locations valid-locations)
+    (tset game-state :lockable-dragons lockable-dragons)
     (ui-view.draw view game-state)))
 
 (fn shift-location [game event direction]
