@@ -31,7 +31,8 @@
   (let [{: layout} view]
     (match location
       [:tableau col-n card-n] {:row (+ layout.tableau.pos.row (* (- card-n 1) 2))
-                               :col (+ layout.tableau.gap
+                               :col (+ layout.tableau.pos.col
+                                       layout.tableau.gap
                                        (* (- col-n 1)
                                           (+ layout.tableau.gap layout.card.size.width)))}
       [:cell col-n card-n] {:row layout.cell.pos.row
@@ -126,6 +127,7 @@
                        :tableau config.tableau
                        :foundation config.foundation
                        :cell config.cell
+                       :buttons config.buttons
                        :card config.card}
               :config config}]
     (fn game-card->ui-card [game-card location]
@@ -218,6 +220,27 @@
           (tset view :cards card :highlight (highlight-name-for-card card))
           (tset view :cards card :pos pos))
         (draw-card fbo (. view :cards card))))
+
+    ;; draw lock buttons
+    (let [{: row : col} view.layout.buttons.pos
+          col (+ col 2)
+          red-text [:< " " :Š]
+          green-text [:< " " "Ñ"]
+          white-text [:< " " "Õ"]
+          write #(frame-buffer.write fbo $1 {:row (+ $2 row) : col} {:width 3 :height 1} $3)]
+      ;; red
+      (write :draw 1 #(. red-text $2))
+      (if game-state.lockable-dragons.DRAGON-RED?
+        (write :color 1 #(highlight-name-for-card [:DRAGON-RED 0]))
+        (write :color 1 #:Comment))
+      (write :draw 2 #(. green-text $2))
+      (if game-state.lockable-dragons.DRAGON-GREEN?
+        (write :color 2 #(highlight-name-for-card [:DRAGON-GREEN 0]))
+        (write :color 2 #:Comment))
+      (write :draw 3 #(. white-text $2))
+      (if game-state.lockable-dragons.DRAGON-WHITE?
+        (write :color 3 #(highlight-name-for-card [:DRAGON-WHITE 0]))
+        (write :color 3 #:Comment)))
 
     ;; draw "can move here" markers
     (each [i location (ipairs game-state.valid-locations)]
