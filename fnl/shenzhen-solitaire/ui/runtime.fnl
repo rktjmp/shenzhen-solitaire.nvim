@@ -190,36 +190,36 @@
                                       [:err e] (error e)))
       ;; pick up is checked against logic state as we have had no effect yet
       [[nil] _] (match (logic.collect-from-ok? logic-state cursor)
-                 [:ok] (let [[slot col-n card-n] cursor
-                             (rem hand) (E.split (. game-state slot col-n) card-n)]
-                         (tset game-state slot col-n rem)
-                         (tset game-state :hand [hand])
-                         (tset game-state :hand-from cursor)
-                         (tset game :game-state game-state))
-                 [:err e] (error e))
+                  [:ok] (let [[slot col-n card-n] cursor
+                              (rem hand) (E.split (. game-state slot col-n) card-n)]
+                          (tset game-state slot col-n rem)
+                          (tset game-state :hand [hand])
+                          (tset game-state :hand-from cursor)
+                          (tset game :game-state game-state))
+                  [:err e] (error e))
       ;; place is checked against game state as we have technically altered it
-      ;; kinda ugly hack so we can place back where we piced up even if it
+      ;; kinda ugly hack so we can place back where we picked up even if it
       ;; makes an invalid sequence
       [[cards] _] (match [cursor hand-from (logic.can-place-ok? game-state cursor cards)]
-                ;; trying to put down where we pickd up, don't do any checks, just revert the state
-                   [[s cl cd] [s cl cd] _]
-                   (let [game-state (doto game-state
-                                      (tset :hand [])
-                                      (tset :hand-from []))
-                         new-game-state (m.update-game-state-with-logic-state game-state logic-state)]
-                     (tset game :game-state new-game-state))
-                ;; otherwise can we move?
-                   [_ _ [:ok]]
-                   (let [{: hand-from} game-state
-                         new-logic-state (logic.move-cards logic-state hand-from cursor)
-                         new-game-state (m.update-game-state-with-logic-state game-state new-logic-state)]
-                     (tset new-game-state :hand [])
-                     (tset new-game-state :hand-from [])
-                     (doto game
-                       (tset :game-state new-game-state)
-                       (tset :logic-state new-logic-state)))
-                ;; hard error here, ui shouldn't request bad things
-                   [_ _ [:err e]] (error e)))
+                    ;; trying to put down where we pickd up, don't do any checks, just revert the state
+                    [[s cl cd] [s cl cd] _]
+                    (let [game-state (doto game-state
+                                       (tset :hand [])
+                                       (tset :hand-from []))
+                          new-game-state (m.update-game-state-with-logic-state game-state logic-state)]
+                      (tset game :game-state new-game-state))
+                    ;; otherwise can we move?
+                    [_ _ [:ok]]
+                    (let [{: hand-from} game-state
+                          new-logic-state (logic.move-cards logic-state hand-from cursor)
+                          new-game-state (m.update-game-state-with-logic-state game-state new-logic-state)]
+                      (tset new-game-state :hand [])
+                      (tset new-game-state :hand-from [])
+                      (doto game
+                        (tset :game-state new-game-state)
+                        (tset :logic-state new-logic-state)))
+                    ;; hard error here, ui shouldn't request bad things
+                    [_ _ [:err e]] (error e)))
     (values game)))
 
 (local path-separator (string.match package.config "(.-)\n"))
@@ -248,26 +248,30 @@
           (m.draw game)))
       (error "Could not open save file, probably doesn't exist"))))
 
+(local hl-normal-background (let [{: background} (vim.api.nvim_get_hl_by_name :Normal true)
+                                  hex (fmt "#%x" background)]
+                              hex))
+
 (local default-config {:card {:size {:width 7 :height 5}
                               :borders {:ne :╮ :nw :╭ :se :╯ :sw :╰ :n :─ :s :─ :e :│ :w :│}}
-                              ; :borders {:ne :🭌 :nw :🭈 :se :🭘 :sw :🭢 :n :🮒 :s :🮃 :e :🮋 :w :🮋}}
+                              ;:borders {:ne :🭌 :nw :🭈 :se :🭘 :sw :🭢 :n :🮒 :s :🮃 :e :🮋 :w :🮋}}
                        :buttons {:pos {:row 1 :col 34}}
                        :tableau {:pos {:row 7 :col 1}
                                  :gap 3}
                        :cell {:pos {:row 1
                                     :col 1}
                               :gap 3}
-                       :foundation {:pos {:row 1 :col 40}
+                       :foundation {:pos {:row 1 :col 41}
                                     :gap 3}
                        :highlight {:empty {:fg :grey}
-                                   :coin {:fg :#e8df78 :bg :#292929}
-                                   :string {:fg :#879ff6 :bg :#292929}
-                                   :myriad {:fg :#23b3ac :bg :#292929}
-                                   :flower {:fg :#934188 :bg :#292929}
-                                   :dragon-green {:fg :#52ad56 :bg :#292929}
-                                   :dragon-white {:fg :#cfcfcf :bg :#292929}
-                                   :dragon-red {:fg :#d34d4d :bg :#292929}}
-                       :info {:pos {:row 1 :col 3}}
+                                   :coin {:fg :#e8df78 :bg hl-normal-background}
+                                   :string {:fg :#879ff6 :bg hl-normal-background}
+                                   :myriad {:fg :#23b3ac :bg hl-normal-background}
+                                   :flower {:fg :#934188 :bg hl-normal-background}
+                                   :dragon-green {:fg :#52ad56 :bg hl-normal-background}
+                                   :dragon-white {:fg :#cfcfcf :bg hl-normal-background}
+                                   :dragon-red {:fg :#d34d4d :bg hl-normal-background}}
+                       :info {:pos {:row 20 :col 3}}
                        :size {:width 80 :height 40}
                        :keys {:left-mouse :<LeftMouse>
                               :interact :y
@@ -322,9 +326,6 @@
                                             (true data) (values data)))
                          any (values nil (fmt "runtime did not know how to handle message %s" (inspect any))))
                        (R.unit))]
-        (when (R.ok? result)
-          (m.update game)
-          (m.draw game))
         (let [and-then (match result
                          ;; dont recurse
                          [:ok :goodbye] #(vim.notify :Goodbye!)

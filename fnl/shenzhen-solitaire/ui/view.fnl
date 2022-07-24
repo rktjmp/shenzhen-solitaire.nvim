@@ -9,6 +9,7 @@
       : split : pairs->table : set$ : reduce} :shenzhen-solitaire.lib.donut.enum :ns enum
      e :shenzhen-solitaire.lib.donut.enum
      {: start-new-game} :shenzhen-solitaire.game.logic
+     {:format fmt} string
      frame-buffer :shenzhen-solitaire.ui.frame-buffer
      ui-card :shenzhen-solitaire.ui.card)
 
@@ -168,6 +169,7 @@
               :cursor []
               :hl-ns (api.nvim_create_namespace :shenzhen-solitaire)
               :layout {:size {:width 80 :height 40}
+                       :info config.info
                        :tableau config.tableau
                        :foundation config.foundation
                        :cell config.cell
@@ -260,6 +262,11 @@
     ;; update our ui-card positions to reflect where they are in the game state
     ;; render cards out according to the tableau, so that's left to right top to
     ;; bottom, this gives us the correct z-indexing
+
+    ;; draw info, this is lower than the cards so stacks can over-write it
+    ; (let [info-string (fmt "wins: %d moves: %d" 10 (- (length game-state.events) 3))
+    ;       info (icollect [c (string.gmatch info-string ".")] c)]
+    ;   (frame-buffer.write fbo :draw view.layout.info.pos {:height 1 :width (length info)} #(. info $2)))
 
     ;; HACK TODO remove this, needed wor when we load a game and the cards
     ;; lookup holds references to older cards
