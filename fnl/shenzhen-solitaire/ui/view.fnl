@@ -168,6 +168,7 @@
               ;; TODO remove cursor from view, it's derived from the cursor position in the game state
               :cursor []
               :hl-ns (api.nvim_create_namespace :shenzhen-solitaire)
+              :difficulty config.difficulty
               :layout {:size {:width 80 :height 40}
                        :info config.info
                        :tableau config.tableau
@@ -307,12 +308,13 @@
         (write :color 3 #:Comment)))
 
     ;; draw "can move here" markers
-    (each [i location (ipairs game-state.valid-locations)]
-      (let [{: row : col} (-> (adjust-location-for-pickup-or-putdown location)
-                              (game-location->view-pos view))
-            pos {:row (+ row 1) :col (- col 2)}]
-        (frame-buffer.write fbo :draw pos {:width 1 :height 1} #"▸")
-        (frame-buffer.write fbo :color pos {:width 1 :height 1} #:Comment)))
+    (if view.difficulty.show-valid-locations
+      (each [i location (ipairs game-state.valid-locations)]
+        (let [{: row : col} (-> (adjust-location-for-pickup-or-putdown location)
+                                (game-location->view-pos view))
+              pos {:row (+ row 1) :col (- col 2)}]
+          (frame-buffer.write fbo :draw pos {:width 1 :height 1} #"▸")
+          (frame-buffer.write fbo :color pos {:width 1 :height 1} #:Comment))))
 
     ;; draw cursor
     (let [{: row : col} (-> (adjust-location-for-pickup-or-putdown game-state.cursor)

@@ -264,11 +264,14 @@
                                    :dragon-red {:fg :#d34d4d :bg hl-normal-background}}
                        :info {:pos {:row 20 :col 3}}
                        :size {:width 80 :height 40}
+                       :difficulty {:show-valid-locations false
+                                    :allow-undo false ;; TODO
+                                    :auto-move-obvious true} ;; TODO
                        :keys {:left-mouse :<LeftMouse>
                               :interact :y
                               :save-game :szw
                               :load-game :szl
-                              :restart-game :szr
+                              ;; :restart-game :szr ;; TODO
                               :next-location :<Tab>
                               :prev-location :<S-Tab>}})
 
