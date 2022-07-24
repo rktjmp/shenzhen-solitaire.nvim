@@ -24,10 +24,30 @@
 (local handlers {})
 
 (fn generate-locations [state opts]
+  "Return list of locations of either 1 1 blanks or n n last cards"
   (enum.flat-map opts
                  (fn [slot [from to]]
                    (enum.map #(iter/range from to)
                              #[slot $1 (math.max 1 (length (. state slot $1)))]))))
+
+(fn generate-pickup-locations [state opts]
+  "Return list of locations for each card in given opt ranges"
+  (enum.flat-map opts
+                 (fn [slot [from to]]
+                   (enum.map #(iter/range from to)
+                             #(match (length (. state slot $1))
+                                0 nil
+                                n [slot $1 n])))))
+
+
+(fn generate-putdown-locations [state opts]
+  "Return a list of all locations after last card in slot or 1 1"
+  (enum.flat-map opts
+                 (fn [slot [from to]]
+                   (enum.map #(iter/range from to)
+                             #(match (length (. state slot $1))
+                                0 [slot $1 1]
+                                n [slot $1 (+ n 1)])))))
 
 (fn location->card [state location]
   ;; TODO: worth exposing this? check location valid?
@@ -292,7 +312,7 @@
         ;; get here but we will exercise the check anyway
         ; (inspect! :can-collect? can-collect? :can-place? can-place?)
         (if (and can-collect? can-place?)
-          (R.ok {: from : to})
+          (R.ok {: from : to}) ;; TODO this value does not match args for move-cards
           (R.err "unable proceed, this was unexpected, please log an issue")))))
 
 (fn M.start-new-game [?seed]
@@ -321,7 +341,7 @@
       (R.unwrap!)))
 
 (fn M.lock-dragons-ok? [state dragon-name]
-  (let [dragon-locations (-> (generate-locations state {:tableau [1 8] :cell [1 3]})
+  (let [dragon-locations (-> (generate-pickup-locations state {:tableau [1 8] :cell [1 3]})
                              (enum.filter #(match (location->card state $2)
                                              [dragon-name _] true)))
         cell-location (-> (generate-locations state {:cell [1 3]})
@@ -341,6 +361,51 @@
   (-> (M.lock-dragons-ok? state dragon-name)
       (R.map #(S.apply state [:locked-dragons $1]))
       (R.unwrap!)))
+
+(fn M.auto-move-ok? [state]
+  ;; get front cards from cells and tableau
+  (let [foundations (generate-putdown-locations state {:foundation [1 4]})
+        ;; we only want to auto-move if the card found is the lowest value on the board,
+        ;; grab all the cards to check against
+        all-cards (-> (enum.flat-map #(iter/range 1 8)
+                                     (fn [col-n]
+                                       (enum.map #(iter/range 1 40)
+                                                 #[:tableau col-n $1])))
+                      (enum.concat$ (enum.map #(iter/range 1 3) #[:cell 1 $1]))
+                      (enum.map #(location->card state $2)))
+        no-higher-card? (fn [[_ min-value]]
+                          ;; we can only auto-move if there are no cards anywhere in on the board that
+                          ;; are less than us. Equal values are ok.
+                          (-> (enum.filter all-cards #(match $2
+                                                        [:FLOWER _] false
+                                                        [:DRAGON-GREEN _] false
+                                                        [:DRAGON-RED _] false
+                                                        [:DRAGON-WHITE _] false
+                                                        [_ test-value] (< test-value min-value)))
+                              (#(= 0 (length $1)))))
+        posibilities (-> (generate-pickup-locations state {:tableau [1 8] :cell [1 3]})
+                         (enum.map #[$2 (location->card state $2)])
+                         ;; TODO this sort is a bit vague, ideally we want to go
+                         ;; flower, then left->right of cell and foundation
+                         ;; but realistically it's not that important if we
+                         ;; pick out of order beyond aesthetics.
+                         (enum.sort$ #(match [$1 $2]
+                                        [[_ [t-a v-a]] [_ [t-b v-b]]] (and (< t-a t-b)
+                                                                           (< v-a v-b))))
+                         (enum.filter #(let [[_ card] $2]
+                                         (no-higher-card? card)))
+                         (enum.flat-map (fn [_ [location card]]
+                                          (enum.map foundations #{:from location
+                                                                  :to $2
+                                                                  : card}))))
+        pick (accumulate [(i found?) (values nil false) index test (ipairs posibilities) :until found?]
+               (if (R.ok? (M.move-cards-ok? state test.from test.to))
+                 (values index true)
+                 (values nil false)))]
+    (if pick
+      (let [{: from : to} (. posibilities pick)]
+        (R.ok {: from : to}))
+      (R.err "no auto-move found"))))
 
 (fn M.win-game [state]
   (error :not-implemented))

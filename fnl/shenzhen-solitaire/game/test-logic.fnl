@@ -251,3 +251,35 @@
      _ (tset state :cell 2 [[:MYRIAD 2]])
      _ (tset state :cell 3 [[:MYRIAD 3]])]
     (must match [:err "no free cell"] (logic.lock-dragons-ok? state :DRAGON-RED))))
+
+(suite "auto-move"
+  [state (playable-state)]
+  (test "it finds an auto-move"
+    ;; simple card to first foundation
+    (for [i 1 8] (tset state :tableau i []))
+    (tset state :tableau 1 [[:STRING 1]])
+    (must match [:ok {:from [:tableau 1 1] :to [:foundation 1 1]}] (logic.auto-move-ok? state))
+    ;; to second foundation, second card
+    (for [i 1 8] (tset state :tableau i []))
+    (tset state :tableau 2 [[:STRING 3] [:STRING 2]])
+    (tset state :foundation 2 [[:STRING 1]])
+    (must match [:ok {:from [:tableau 2 2] :to [:foundation 2 2]}] (logic.auto-move-ok? state))
+    ;; flower
+    (for [i 1 8] (tset state :tableau i []))
+    (tset state :tableau 2 [[:STRING 3] [:FLOWER 0]])
+    (tset state :cell 2 [[:STRING 1]])
+    (must match [:ok {:from [:tableau 2 2] :to [:foundation 4 1]}] (logic.auto-move-ok? state)))
+  (test "it finds no moves"
+    ;; literally no move
+    (for [i 1 8] (tset state :tableau i []))
+    (tset state :tableau 2 [[:STRING 1] [:STRING 3]])
+    (tset state :cell 2 [[:STRING 2]])
+    (must match [:err "no auto-move found"] (logic.auto-move-ok? state))
+    ;; looks like there is a move, but we have a card on the board that is of lower value
+    (for [i 1 8] (tset state :tableau i []))
+    (tset state :tableau 2 [[:MYRIAD 1] [:STRING 3]])
+    (tset state :cell 2 [[:STRING 2]])
+    (tset state :foundation 1 [[:STRING 1]])
+    (must match [:err "no auto-move found"] (logic.auto-move-ok? state)))
+  (test "it only returns one auto-move from the left most side, starting with cells"))
+
