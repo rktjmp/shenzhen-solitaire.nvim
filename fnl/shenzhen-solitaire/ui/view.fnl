@@ -141,31 +141,34 @@
                                         [byte-count index]))))]
           (values index)))
 
+      (fn bind-mouse [lhs event-name desc]
+        (let [eval-er (fmt "\"\\%s\"" lhs)]
+        (api.nvim_buf_set_keymap buf-id :n lhs ""
+                                 {:callback (vim.schedule_wrap
+                                              #(let [{: winid :column byte-offset :line row} (vim.fn.getmousepos)
+                                                     x (vim.api.nvim_eval eval-er)
+                                                     col (byte-offset->col row byte-offset)]
+                                                 (inspect! (vim.fn.getmousepos))
+                                                 ;; map col row to location, this
+                                                 ;; may fail as click can be
+                                                 ;; outside the buffer when
+                                                 ;; switching.
+                                                 (if (= winid view.winid)
+                                                   ;; clicked in same win, send event
+                                                   (match (?. FBO-HIT-HACK :hit row col)
+                                                     (where loc (< 0 (length loc)))
+                                                     (responder {:name event-name :location loc :view view}))
+                                                   ;; different win, pass would-be click
+                                                   (vim.cmd (.. "normal! " x)))))
+                                  :desc desc})))
+      (bind-mouse :<LeftMouse> :left-mouse "Inferred action for left mouse")
+      (bind-mouse :<RightMouse> :right-mouse "Inferred action for right mouse")))
 
-      (api.nvim_buf_set_keymap buf-id :n :<LeftMouse> ""
-                               {:callback (vim.schedule_wrap
-                                            #(let [{:column byte-offset :line row} (vim.fn.getmousepos)
-                                                   x (vim.api.nvim_eval "\"\\<LeftMouse>\"")
-                                                   col (byte-offset->col row byte-offset)]
-                                               (print :aj byte-offset :-> col)
-                                               ;; map col row to location, this
-                                               ;; may fail as click can be
-                                               ;; outside the buffer when
-                                               ;; switching.
-                                               (inspect! :aj [byte-offset col]
-                                                         :hit? row col (?. FBO-HIT-HACK :hit row col))
-                                               (match (?. FBO-HIT-HACK :hit row col)
-                                                 (where loc (< 0 (length loc)))
-                                                 (responder {:name :left-mouse :location loc :view view}))
-                                               (vim.cmd (.. "normal! " x))))
-                                ;; TODO tighten up this
-                                :expr false
-                                :noremap false
-                                :desc "Inferred action for left mouse"})))
   (let [real-buf-id buf-id
         ;; This view is strictly a configuration container and should not
         ;; maintain any actual game state.
         view {: buf-id
+              :winid (api.nvim_buf_call buf-id api.nvim_get_current_win)
               : responder
               :hl-ns (api.nvim_create_namespace :shenzhen-solitaire)
               :difficulty config.difficulty

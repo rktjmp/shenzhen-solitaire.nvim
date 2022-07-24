@@ -200,6 +200,16 @@
       (set game.game-state.cursor cursor)
       (m.interact game event))))
 
+(fn m.right-mouse [game event]
+  ;; just try to put down cards if we have any
+  (let [{: location} event
+        {: hand : hand-from} game.game-state
+        holding? (match hand [nil] false [cards] true)]
+    (inspect! hand-from)
+    (when holding?
+      (set game.game-state.cursor hand-from)
+      (m.interact game event))))
+
 (fn m.auto-move [game event]
   (let [{: game-state : logic-state} game]
     (match (logic.auto-move-ok? logic-state)
@@ -315,11 +325,12 @@
                                     :allow-undo false ;; TODO
                                     :auto-move-obvious true}
                        :keys {:left-mouse :<LeftMouse>
+                              :right-mouse :<RightMouse>
                               :interact :y
                               :auto-move :a
                               :save-game :szw
                               :load-game :szl
-                              ;; :restart-game :szr ;; TODO
+                              ; :restart-game :szr ;; TODO
                               :next-location :<Tab>
                               :prev-location :<S-Tab>}})
 
