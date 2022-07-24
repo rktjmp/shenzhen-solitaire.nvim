@@ -37,27 +37,23 @@
 (local M {})
 (local m {:games []})
 
-(fn m.generate-valid-locations [game]
-  ;; if we have nothing in hand, search all positions in the layout for
-  ;; locations that can be picked up.
-  ;; TODO sort this so the first valid move is directly after the current
-  ;; cursor.
-  ;; TODO 'hard' mode where this isn't validated?
-  (fn valid-locations-for-pickup [game]
+(fn m.generate-valid-locations [game-state]
+  "Given a game state, find all board locations that the user may interact with.
+  This is dictated by some game-state such as wether cards are in-hand or not."
+  (fn all-possible-pickup-locations [game-state]
     ;; for pickup we want to check every card on the table
     (let [fm E.flat-map
           map E.map]
       (fm [:tableau :cell :foundation]
           (fn [_ slot]
-            (fm (. game :game-state slot)
+            (fm (. game-state slot)
                 (fn [col-n col]
                   (map col (fn [card-n]
                              [slot col-n card-n]))))))))
-  (fn valid-locations-for-putdown [game]
+  (fn all-possible-putdown-locations [game-state]
     ;; for put down we need to check the card positions *after* the last card
     ;; in every slotxcol, as well as any 1 1 of empty columns.
-    (let [{: game-state} game
-          head-or-tail (fn [slot col-n]
+    (let [head-or-tail (fn [slot col-n]
                          (match (. game-state slot col-n)
                            (where col (<= 1 (length col))) [slot col-n (+ 1 (length col))]
                            (where col (= 0 (length col))) [slot col-n 1]))]
@@ -66,13 +62,12 @@
           (E.concat$ (E.map #(iter/range 1 4) #(head-or-tail :foundation $1)))
           (E.concat$ (E.map #(iter/range 1 3) #(head-or-tail :cell $1))))))
 
-  (let [{: game-state} game
-        {: hand : hand-from} game-state
+  (let [{: hand : hand-from} game-state
         holding? (match hand [nil] false [cards] true)
         checked-locations (match hand
-                            [nil] (E.map (valid-locations-for-pickup game)
+                            [nil] (E.map (all-possible-pickup-locations game-state)
                                          #[(logic.collect-from-ok? game-state $2) $2])
-                            [cards] (E.map (valid-locations-for-putdown game)
+                            [cards] (E.map (all-possible-putdown-locations game-state)
                                            #[(logic.can-place-ok? game-state $2 cards) $2]))
         ;; dont insert duplicate position if hand is same as one we generate
         ugly (match hand-from
@@ -105,19 +100,15 @@
     (values locations)))
 
 (fn m.update [game]
-  (fn check-lock [dragon-name]
-    (match (logic.lock-dragons-ok? game.logic-state dragon-name)
-      [:ok] true
-      _ false))
-  ;; TODO HACK, some semi race here where valid locations needs to check lockable-dragons
-  ;; to set the button location, so this order matters for now...
   (let [{: view : game-state} game
-        lockable-dragons {:DRAGON-GREEN? (check-lock :DRAGON-GREEN)
-                          :DRAGON-RED? (check-lock :DRAGON-RED)
-                          :DRAGON-WHITE? (check-lock :DRAGON-WHITE)}
-        _ (tset game-state :lockable-dragons lockable-dragons)
-        valid-locations (m.generate-valid-locations game)
-        _ (tset game-state :valid-locations valid-locations)]
+        check-lock #(R.ok? (logic.lock-dragons-ok? game.logic-state $1))]
+    (doto game-state
+      ;; valid locations is influenced by lockable dragons as we consider the
+      ;; "buttons" valid locations, so this must be updated first.
+      (tset :lockable-dragons {:DRAGON-GREEN? (check-lock :DRAGON-GREEN)
+                               :DRAGON-RED? (check-lock :DRAGON-RED)
+                               :DRAGON-WHITE? (check-lock :DRAGON-WHITE)})
+      (tset :valid-locations (m.generate-valid-locations game-state)))
     (values game)))
 
 (fn m.draw [game]
