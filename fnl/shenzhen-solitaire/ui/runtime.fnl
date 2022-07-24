@@ -104,7 +104,7 @@
                                    [])))]
     (values locations)))
 
-(fn m.tick-game [game]
+(fn m.update [game]
   (fn check-lock [dragon-name]
     (match (logic.lock-dragons-ok? game.logic-state dragon-name)
       [:ok] true
@@ -120,7 +120,7 @@
         _ (tset game-state :valid-locations valid-locations)]
     (values game)))
 
-(fn m.draw-game [game]
+(fn m.draw [game]
   (let [{: view : game-state} game]
     (ui-view.draw view game-state)))
 
@@ -244,8 +244,8 @@
               new-game-state (m.update-game-state-with-logic-state {} new-logic-state)]
           (tset game :logic-state new-logic-state)
           (tset game :game-state new-game-state)
-          (m.tick-game game)
-          (m.draw-game game)))
+          (m.update game)
+          (m.draw game)))
       (error "Could not open save file, probably doesn't exist"))))
 
 (local default-config {:card {:size {:width 7 :height 5}
@@ -267,6 +267,7 @@
                                    :dragon-green {:fg :#52ad56 :bg :#292929}
                                    :dragon-white {:fg :#cfcfcf :bg :#292929}
                                    :dragon-red {:fg :#d34d4d :bg :#292929}}
+                       :info {:pos {:row 1 :col 3}}
                        :size {:width 80 :height 40}
                        :keys {:left-mouse :<LeftMouse>
                               :interact :y
@@ -302,9 +303,10 @@
       ;; setup the inital game state and bang
       (set game.logic-state (logic.start-new-game ?seed))
       (set game.game-state (m.update-game-state-with-logic-state {} game.logic-state))
-      (set game.view (ui-view.new buf-id game.game-state responder game.config))
-      (m.tick-game game)
-      (m.draw-game game))
+      (set game.view (-> (ui-view.new buf-id responder game.config)
+                         (ui-view.update game.game-state)))
+      (m.update game)
+      (m.draw game))
     (fn loop [...]
       ;; we dont want errors in the game code to totally kill the game coroutine
       ;; because that means the game cant be continued or saved, etc, so
@@ -321,14 +323,14 @@
                          any (values nil (fmt "runtime did not know how to handle message %s" (inspect any))))
                        (R.unit))]
         (when (R.ok? result)
-          (m.tick-game game)
-          (m.draw-game game))
+          (m.update game)
+          (m.draw game))
         (let [and-then (match result
                          ;; dont recurse
                          [:ok :goodbye] #(vim.notify :Goodbye!)
                          [:ok] (do
-                                 (m.tick-game game)
-                                 (m.draw-game game)
+                                 (m.update game)
+                                 (m.draw game)
                                  (values loop))
                          [:err e] (values loop))]
           (and-then (coroutine.yield result)))))

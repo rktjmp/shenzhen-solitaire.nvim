@@ -84,7 +84,7 @@
                    (fn [card-n card]
                      (f card [slot col-n card-n])))))))))
 
-(fn M.new [buf-id game-state responder config]
+(fn M.new [buf-id responder config]
   "Configures given buffer to act as game view and does some preparation busy work.
 
   Returns table describing view."
@@ -98,6 +98,7 @@
       (set-hl :DRAGON-WHITE highlight-config.dragon-white)
       (set-hl :DRAGON-GREEN highlight-config.dragon-green)
       (set-hl :FLOWER highlight-config.flower)))
+
   (fn configure-buffer [view]
     (let [{: buf-id : responder} view
           set-km #(api.nvim_buf_set_keymap buf-id
@@ -109,15 +110,13 @@
                                             :nowait true
                                             :desc $2})]
       ;; TODO set no-mod, etc
-      (let [opts {:filetype :shenzhen-solitaire}]
-        (enum/map opts #(api.nvim_buf_set_option buf-id $1 $2)))
-      (api.nvim_buf_call buf-id
-                         #(let [win-id (api.nvim_get_current_win)
-                                opts {:cursorline false
-                                      :number false
-                                      :list false
-                                      :relativenumber false}]
-                            (enum/map opts #(api.nvim_win_set_option win-id $1 $2))))
+      (let [buf-opts {:filetype :shenzhen-solitaire}
+           win-opts {:cursorline false :number false :list false :relativenumber false}]
+        (enum/map buf-opts #(api.nvim_buf_set_option buf-id $1 $2))
+        (api.nvim_buf_call buf-id
+                           #(let [win-id (api.nvim_get_current_win)]
+                              (enum/map win-opts #(api.nvim_win_set_option win-id $1 $2)))))
+
       (set-km :save-game "Save current game")
       (set-km :load-game "Load last saved game")
       (set-km :next-location "Move to next location")
@@ -156,6 +155,7 @@
                                                  (where loc (< 0 (length loc)))
                                                  (responder {:name :left-mouse :location loc :view view}))
                                                (vim.cmd (.. "normal! " x))))
+                                ;; TODO tighten up this
                                 :expr false
                                 :noremap false
                                 :desc "Inferred action for left mouse"})))
@@ -165,7 +165,7 @@
         view {: buf-id
               : responder
               ;; TODO remove cursor from view, it's derived from the cursor position in the game state
-              :cursor game-state.cursor
+              :cursor []
               :hl-ns (api.nvim_create_namespace :shenzhen-solitaire)
               :layout {:size {:width 80 :height 40}
                        :tableau config.tableau
@@ -200,6 +200,9 @@
     (define-highlight-groups config.highlight)
     (configure-buffer view)
     (values view)))
+
+(fn M.update [view game-state]
+  view)
 
 (fn game-card->ui-card [view game-card location]
   "Cards are effectively singletons both in the logic and in the UI, so we can
