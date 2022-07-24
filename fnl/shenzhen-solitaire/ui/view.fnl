@@ -122,8 +122,8 @@
       (set-km :load-game "Load last saved game")
       (set-km :next-location "Move to next location")
       (set-km :prev-location "Move to previous location")
-      (set-km :move-right "Move right")
-      (set-km :move-left "Move left")
+      ; (set-km :move-right "Move right")
+      ; (set-km :move-left "Move left")
       (set-km :interact "Pick up, put down, interact")
 
       ;; Most events can just be passed though but mouse clicks need to actually translate

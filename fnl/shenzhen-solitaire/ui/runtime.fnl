@@ -26,9 +26,11 @@
 (import-macros {: use} :shenzhen-solitaire.lib.donut.use)
 
 (use {: range} :shenzhen-solitaire.lib.donut.iter :ns iter
-     {: inspect!} :shenzhen-solitaire.lib.donut.inspect
+     {: inspect : inspect!} :shenzhen-solitaire.lib.donut.inspect
+     {:format fmt} string
      E :shenzhen-solitaire.lib.donut.enum
      R :shenzhen-solitaire.lib.donut.result
+     {: 'let} :shenzhen-solitaire.lib.donut.result :ns R
      logic :shenzhen-solitaire.game.logic
      ui-view :shenzhen-solitaire.ui.view)
 
@@ -180,7 +182,7 @@
                                     (match (logic.lock-dragons-ok? logic-state which)
                                       [:ok {: to}]
                                       (let [new-logic-state (logic.lock-dragons logic-state which)
-                                            new-game-state (m.game-state<-logic-state game-state new-logic-state)]
+                                            new-game-state (m.update-game-state-with-logic-state game-state new-logic-state)]
                                         (tset new-game-state :cursor to)
                                         (doto game
                                           (tset :game-state new-game-state)
@@ -204,13 +206,13 @@
                    (let [game-state (doto game-state
                                       (tset :hand [])
                                       (tset :hand-from []))
-                         new-game-state (m.game-state<-logic-state game-state logic-state)]
+                         new-game-state (m.update-game-state-with-logic-state game-state logic-state)]
                      (tset game :game-state new-game-state))
                 ;; otherwise can we move?
                    [_ _ [:ok]]
                    (let [{: hand-from} game-state
                          new-logic-state (logic.move-cards logic-state hand-from cursor)
-                         new-game-state (m.game-state<-logic-state game-state new-logic-state)]
+                         new-game-state (m.update-game-state-with-logic-state game-state new-logic-state)]
                      (tset new-game-state :hand [])
                      (tset new-game-state :hand-from [])
                      (doto game
@@ -232,33 +234,23 @@
       (vim.notify "Saved game"))))
 
 (fn m.load-game [game event]
-  (let [save-file (join-path (vim.fn.stdpath :cache) :shenzhen-solitaire.save)]
-    (with-open [fin (io.open save-file)]
-      ;; TODO missing file does what
-      (let [bytes (fin:read :*a)
-            events (vim.mpack.decode bytes)
-            new-logic-state (E.reduce events (logic.S.empty-state) #(logic.S.apply $1 $3))
-            new-game-state (m.game-state<-logic-state {} new-logic-state)]
-        (tset game :logic-state new-logic-state)
-        (tset game :game-state new-game-state)
-        (m.tick-game game)
-        (m.draw-game game)))))
-
-(fn m.handle-event [game event]
-  (let [{: name} event]
-    (match (. m name)
-      f (do
-          ;; its assumed any event requires a redraw afterwards
-          ;; its's also assumed that events are dirty disgusting things that
-          ;; may modify any data without passing it back.
-          (f game event)
+  (let [save-file (join-path (vim.fn.stdpath :cache) :shenzhen-solitaire.save)
+        readable (= 1 (vim.fn.filereadable save-file))]
+    (if readable
+      (with-open [fin (io.open (.. save-file))]
+        (let [bytes (fin:read :*a)
+              events (vim.mpack.decode bytes)
+              new-logic-state (E.reduce events (logic.S.empty-state) #(logic.S.apply $1 $3))
+              new-game-state (m.update-game-state-with-logic-state {} new-logic-state)]
+          (tset game :logic-state new-logic-state)
+          (tset game :game-state new-game-state)
           (m.tick-game game)
-          (m.draw-game game))
-      nil (error (string.format "no handler for %s" name)))))
-
+          (m.draw-game game)))
+      (error "Could not open save file, probably doesn't exist"))))
 
 (local default-config {:card {:size {:width 7 :height 5}
                               :borders {:ne :╮ :nw :╭ :se :╯ :sw :╰ :n :─ :s :─ :e :│ :w :│}}
+                              ; :borders {:ne :🭌 :nw :🭈 :se :🭘 :sw :🭢 :n :🮒 :s :🮃 :e :🮋 :w :🮋}}
                        :buttons {:pos {:row 1 :col 34}}
                        :tableau {:pos {:row 7 :col 1}
                                  :gap 3}
@@ -273,22 +265,18 @@
                                    :myriad {:fg :#23b3ac :bg :#292929}
                                    :flower {:fg :#934188 :bg :#292929}
                                    :dragon-green {:fg :#52ad56 :bg :#292929}
-                                   :dragon-white {:fg :#ffffff :bg :#292929}
-                                   :dragon-red {:fg :#b34d4d :bg :#292929}}
+                                   :dragon-white {:fg :#cfcfcf :bg :#292929}
+                                   :dragon-red {:fg :#d34d4d :bg :#292929}}
                        :size {:width 80 :height 40}
                        :keys {:left-mouse :<LeftMouse>
-                              :move-right :o
-                              :move-left :m
-                              :move-up :i
-                              :move-down :n
                               :interact :y
-                              :cancel :q
                               :save-game :szw
                               :load-game :szl
+                              :restart-game :szr
                               :next-location :<Tab>
                               :prev-location :<S-Tab>}})
 
-(fn m.game-state<-logic-state [game-state logic-state]
+(fn m.update-game-state-with-logic-state [game-state logic-state]
   "game-state is a mutation on the logic state with some parital changes
   applied for picking up cards, as well as tracking additional information such
   as cursor position, valid moves, cards-in-hand-or-not etc."
@@ -300,20 +288,61 @@
       (tset :lockable-dragons (or game-state.lockable-dragons []))
       (tset :valid-locations (or game-state.valid-locations [])))))
 
-(fn M.start-new-game [buf-id seed]
-  (var current-game nil)
-  (let [logic-state (logic.start-new-game seed)
-        game-state (m.game-state<-logic-state {} logic-state)
-        responder (fn [event] (m.handle-event current-game event))
-        view (ui-view.new buf-id game-state responder default-config)]
-    (set current-game {:logic-state logic-state
-                       :game-state game-state
-                       :view view}))
-  (m.tick-game current-game)
-  (m.draw-game current-game)
-  (values current-game))
+(fn M.start-new-game [buf-id first-responder ?config ?seed]
+  "Generate a fresh game and return a coroutine which will handle events when resumed"
+  (fn setup []
+    ;; we want access to the coroutine thread for passing between responders,
+    ;; so we encapsulate the setup too.
+    (local game {:logic-state nil
+                 :game-state nil
+                 :view nil
+                 :config (or ?config default-config)})
+    (let [thread (coroutine.running)
+          responder #(first-responder thread $...)]
+      ;; setup the inital game state and bang
+      (set game.logic-state (logic.start-new-game ?seed))
+      (set game.game-state (m.update-game-state-with-logic-state {} game.logic-state))
+      (set game.view (ui-view.new buf-id game.game-state responder game.config))
+      (m.tick-game game)
+      (m.draw-game game))
+    (fn loop [...]
+      ;; we dont want errors in the game code to totally kill the game coroutine
+      ;; because that means the game cant be continued or saved, etc, so
+      ;; we'll pcall the event handers and do some fiddle work to make it look like
+      ;; an error to the caller if required.
+      (let [result (-> (match [...]
+                         [:control :hello] (values true :hello!)
+                         [:config :goodbye] (values true :goodbye!)
+                         [:event event] (let [{: name} event
+                                              f (or (. m name) #(error (fmt "No handler for %s" name)))]
+                                          (match (pcall f game event)
+                                            (false err) (values nil err)
+                                            (true data) (values data)))
+                         any (values nil (fmt "runtime did not know how to handle message %s" (inspect any))))
+                       (R.unit))]
+        (when (R.ok? result)
+          (m.tick-game game)
+          (m.draw-game game))
+        (let [and-then (match result
+                         ;; dont recurse
+                         [:ok :goodbye] #(vim.notify :Goodbye!)
+                         [:ok] (do
+                                 (m.tick-game game)
+                                 (m.draw-game game)
+                                 (values loop))
+                         [:err e] (values loop))]
+          (and-then (coroutine.yield result)))))
+    ;; start the loop which will do noting and yield
+    (loop :control :hello))
+  (coroutine.create setup))
 
 (values M)
 
-(M.start-new-game 20)
+(let [thread (M.start-new-game 2 (fn [thread event]
+                                   (match (coroutine.resume thread :event event)
+                                     (true [:ok _]) nil
+                                     (true [:err e]) (error e)
+                                     (false e) (error e))))]
+  (assert (coroutine.resume thread :control :hello)))
+
 (values nil)
