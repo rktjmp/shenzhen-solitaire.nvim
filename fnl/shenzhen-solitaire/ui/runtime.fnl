@@ -27,10 +27,10 @@
 
 (use {: range} :shenzhen-solitaire.lib.donut.iter :ns iter
      {: inspect : inspect!} :shenzhen-solitaire.lib.donut.inspect
+     {: nil?} :shenzhen-solitaire.lib.donut.type
      {:format fmt} string
      E :shenzhen-solitaire.lib.donut.enum
      R :shenzhen-solitaire.lib.donut.result
-     {: 'let} :shenzhen-solitaire.lib.donut.result :ns R
      logic :shenzhen-solitaire.game.logic
      ui-view :shenzhen-solitaire.ui.view)
 
@@ -39,7 +39,8 @@
 
 (fn m.generate-valid-locations [game-state]
   "Given a game state, find all board locations that the user may interact with.
-  This is dictated by some game-state such as wether cards are in-hand or not."
+  This is dictated by some game-state such as whether cards are in-hand or not
+  and includes buttons."
   (fn all-possible-pickup-locations [game-state]
     ;; for pickup we want to check every card on the table
     (let [fm E.flat-map
@@ -69,13 +70,20 @@
                                          #[(logic.collect-from-ok? game-state $2) $2])
                             [cards] (E.map (all-possible-putdown-locations game-state)
                                            #[(logic.can-place-ok? game-state $2 cards) $2]))
-        ;; dont insert duplicate position if hand is same as one we generate
+        ;; we also want to insert the place we picked up our cards from, so we
+        ;; can return to that location and put the cards back. This might not
+        ;; always be a valid location unless we picked up mid-sequence or from
+        ;; the head of a slot, which is why we manually insert it, but also
+        ;; don't want to insert it if it already exists (if we picked up mid seq).
         ugly (match hand-from
                [h-slot h-col h-card]
                #(if (accumulate [f true _ [_ [slot col card]] (ipairs $1) :until (not f)]
                         (match [h-slot h-col h-card] [slot col card] false _ true))
+                  ;; did not find hand in given possitions, so add it
                   (E.append$ $1 [[:ok true] hand-from])
+                  ;; did find hand, dont need to add
                   (values $1))
+               ;; empty hand, pass value on as is
                _ #$1)
         locations (-> checked-locations
                       (E.filter #(match $2 [[:ok] location] true))
@@ -90,8 +98,9 @@
                                      [[s x _] [s y _]] (< x y)
                                      [[x _ _] [y _ _]] (< x y)))))
                       ;; TODO Questionable decision to smush buttons here as "positions"
-                      (E.concat$ (-> (if holding? [:DRAGON-RED :DRAGON-GREEN :DRAGON-WHITE] [])
-                                     (E.map #(if (. game-state :lockable-dragons (.. $2 :?)) [:LOCK-DRAGON 1 $1])))))]
+                      (E.concat$ (-> (if (not holding?) [:DRAGON-RED :DRAGON-GREEN :DRAGON-WHITE] [])
+                                     (E.map #(if (. game-state :lockable-dragons (.. $2 :?))
+                                               [:LOCK-DRAGON 1 $1])))))]
     (values locations)))
 
 (fn m.update [game]
@@ -113,7 +122,8 @@
                                :DRAGON-RED? (lockable? :DRAGON-RED)
                                :DRAGON-WHITE? (lockable? :DRAGON-WHITE)})
       (tset :valid-locations (m.generate-valid-locations game-state)))
-    (values game)))
+  (ui-view.update game.view game.game-state)
+  (values game)))
 
 (fn m.draw [game]
   (let [{: view : game-state} game]
@@ -146,22 +156,41 @@
   (shift-location game event :prev))
 
 (fn m.left-mouse [game event]
+  ;; When we write out to the hit buffer, we currently don't do any special
+  ;; processing, so while a valid put down location might be [t 1 2], with a
+  ;; card at [t 1 1], the hit buffer can only detect a click on [t 1 1].
+  ;; This means we have to do some special checks around whether the position
+  ;; after or before the click location are valid locations to interact with.
   (let [{: location} event
+        {: hand} game.game-state
         [click-slot click-col click-card] location
-        next-card (if (= click-card 1)
-                    click-card
-                    (+ click-card 1))
-        prev-card (if (= click-card 1)
-                    click-card
-                    (- click-card 1))
-        matches-click-location? (match [click-slot game.game-state.hand]
-                                  ;; no hand, pick up directly
-                                  [:tableau [nil]] #(match $2 [click-slot click-col click-card] true)
-                                  ;; hand, we want to place down below the card hit
-                                  ;; (ui shows last card but place is "after it")
-                                  [:tableau [cards]] #(match $2 [click-slot click-col next-card] true)
+        holding? (match hand [nil] false [cards] true)
+        ;; as above, hit locations are "as rendered" but we want to check the
+        ;; card after that, with the exception of empty positions which, as a
+        ;; shortcut in the view, report the same location as the first would-be
+        ;; card in the slot. We check if there is actually any cards where we
+        ;; clicked - if there is, check the next location, if none, we actually
+        ;; want the directly clicked location.
+        clicked-empty? (nil? (?. game.game-state click-slot click-col click-card))
+        next-card (if clicked-empty? click-card (+ click-card 1))
+        ;; check every valid location against this function, which should
+        ;; filter the valid locations to either one location or zero. If we
+        ;; have one we can move the cursor there and act as if we got a normal
+        ;; interact event.
+        matches-click-location? (match [click-slot holding?]
+                                  ;; we clicked the tableau but have no hand,
+                                  ;; so we want to check if the click location
+                                  ;; is directly vald, which means we can pick
+                                  ;; up from there.
+                                  [:tableau false] #(match $2 [click-slot click-col click-card] true)
+                                  ;; We clicked the tableau with cards in hand,
+                                  ;; this means we want to put down cards and must
+                                  ;; actually check the position *after* what we clicked
+                                  ;; the position after was never draw and is un-clickable,
+                                  ;; while also being an invalid put-down location.
+                                  [:tableau true] #(match $2 [click-slot click-col next-card] true)
                                   ;; foundation shows last card but place after it
-                                  [:foundation [cards]] #(match $2 [click-slot click-col next-card] true)
+                                  [:foundation true] #(match $2 [click-slot click-col next-card] true)
                                   ;; cells only one card so dont adjust
                                   [_ _] #(match $2 [click-slot click-col click-card] true))
         ;; of all the valid locations, does the click location match one?
@@ -209,7 +238,7 @@
       ;; kinda ugly hack so we can place back where we picked up even if it
       ;; makes an invalid sequence
       [[cards] _] (match [cursor hand-from (logic.can-place-ok? game-state cursor cards)]
-                    ;; trying to put down where we pickd up, don't do any checks, just revert the state
+                    ;; trying to put down where we picked up, don't do any checks, just revert the state
                     [[s cl cd] [s cl cd] _]
                     (let [game-state (doto game-state
                                        (tset :hand [])
@@ -284,7 +313,7 @@
                        :cursor {:show true} ;; show cursor, strongly recommended without a mouse
                        :difficulty {:show-valid-locations true ;; show possible interactive locations, useful without a mouse.
                                     :allow-undo false ;; TODO
-                                    :auto-move-obvious true} ;; TODO
+                                    :auto-move-obvious true}
                        :keys {:left-mouse :<LeftMouse>
                               :interact :y
                               :auto-move :a
@@ -357,8 +386,8 @@
 (let [thread (M.start-new-game 2 (fn [thread event]
                                    (match (coroutine.resume thread :event event)
                                      (true [:ok _]) nil
-                                     (true [:err e]) (error e)
-                                     (false e) (error e))))]
+                                     (true [:err e]) (error (.. e (debug.traceback thread)))
+                                     (false e) (error (.. e (debug.traceback thread))))))]
   (assert (coroutine.resume thread :control :hello)))
 
 (values nil)
