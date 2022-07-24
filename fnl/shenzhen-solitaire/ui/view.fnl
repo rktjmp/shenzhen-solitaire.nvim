@@ -4,6 +4,7 @@
 (import-macros {: use} :shenzhen-solitaire.lib.donut.use)
 
 (use {: range} :shenzhen-solitaire.lib.donut.iter :ns iter
+     {: inspect!} :shenzhen-solitaire.lib.donut.inspect
      {: map : each : flat-map : flatten
       : split : pairs->table : set$ : reduce} :shenzhen-solitaire.lib.donut.enum :ns enum
      e :shenzhen-solitaire.lib.donut.enum
@@ -11,6 +12,7 @@
      frame-buffer :shenzhen-solitaire.ui.frame-buffer
      ui-card :shenzhen-solitaire.ui.card)
 
+(var FBO-HIT-HACK nil)
 (local api vim.api)
 (local M {})
 
@@ -122,8 +124,41 @@
       (set-km :prev-location "Move to previous location")
       (set-km :move-right "Move right")
       (set-km :move-left "Move left")
-      (set-km :interact "Pick up, put down, interact")))
+      (set-km :interact "Pick up, put down, interact")
 
+      ;; Most events can just be passed though but mouse clicks need to actually translate
+      ;; between the view data and runtime data.
+      (fn byte-offset->col [row target-byte-offset]
+        ;; or here for clicks outside of window/range which shoujd just no-op
+        (let [[_ index] (e.reduce (or (. FBO-HIT-HACK :draw row) []) [0 0]
+                                  (fn [[byte-count index] i bytes]
+                                    (if (<= target-byte-offset byte-count)
+                                      [byte-count index]
+                                      (let [byte-count (+ byte-count (length bytes))
+                                            index i]
+                                        [byte-count index]))))]
+          (values index)))
+
+
+      (api.nvim_buf_set_keymap buf-id :n :<LeftMouse> ""
+                               {:callback (vim.schedule_wrap
+                                            #(let [{:column byte-offset :line row} (vim.fn.getmousepos)
+                                                   x (vim.api.nvim_eval "\"\\<LeftMouse>\"")
+                                                   col (byte-offset->col row byte-offset)]
+                                               (print :aj byte-offset :-> col)
+                                               ;; map col row to location, this
+                                               ;; may fail as click can be
+                                               ;; outside the buffer when
+                                               ;; switching.
+                                               (inspect! :aj [byte-offset col]
+                                                         :hit? row col (?. FBO-HIT-HACK :hit row col))
+                                               (match (?. FBO-HIT-HACK :hit row col)
+                                                 (where loc (< 0 (length loc)))
+                                                 (responder {:name :left-mouse :location loc :view view}))
+                                               (vim.cmd (.. "normal! " x))))
+                                :expr false
+                                :noremap false
+                                :desc "Inferred action for left mouse"})))
   (let [real-buf-id buf-id
         ;; This view is strictly a configuration container and should not
         ;; maintain any actual game state.
@@ -160,7 +195,7 @@
                                  (enum/flatten)
                                  (enum/map (fn [_ location]
                                              (let [[_ ui-card] (game-card->ui-card [:EMPTY 0] location)]
-                                               (values ui-card))))))
+                                               (values [ui-card location]))))))
 
     (define-highlight-groups config.highlight)
     (configure-buffer view)
@@ -188,7 +223,7 @@
   ;; Track "damage" diff against last fb and only re-write where we need to
   ;; TODO remove cursor from view, it's derived from the cursor position in the game state
   (tset view :cursor game-state.cursor)
-  (fn draw-card [fbo card]
+  (fn draw-card [fbo card location]
     (let [{: pos : size : bitmap : highlight} card
           edge-hl :Normal
           pos->char (fn [r c] (. bitmap r c))
@@ -200,8 +235,10 @@
                       [_ 1] edge-hl
                       [_ size.width] edge-hl))
           write #(frame-buffer.write fbo $1 pos size $2)]
+      (assert location "no location")
       (write :draw pos->char)
-      (write :color pos->hl)))
+      (write :color pos->hl)
+      (write :hit #location)))
 
   (fn adjust-location-for-pickup-or-putdown [location]
     ;; valid pickup locations are "on card", valid put down locations are "post
@@ -212,9 +249,11 @@
                 [slot col-n (math.max 1 (- card-n 1))])))
 
   (let [fbo (frame-buffer.new view.size)
+        _ (set FBO-HIT-HACK fbo)
         for-each-game-card #(map-game-state-cards game-state $1)]
     ;; render out card slot placeholders
-    (e.each view.placeholders #(draw-card fbo $2))
+    (e.each view.placeholders #(let [[card location] $2]
+                                 (draw-card fbo card location)))
     ;; update our ui-card positions to reflect where they are in the game state
     ;; render cards out according to the tableau, so that's left to right top to
     ;; bottom, this gives us the correct z-indexing
@@ -228,7 +267,7 @@
         (let [pos (game-location->view-pos location view)]
           (tset view :cards card :highlight (highlight-name-for-card card))
           (tset view :cards card :pos pos))
-        (draw-card fbo (. view :cards card))))
+        (draw-card fbo (. view :cards card) location)))
 
     ;; draw lock buttons
     (let [{: row : col} view.layout.buttons.pos
@@ -240,15 +279,21 @@
       ;; red
       (write :draw 1 #(. red-text $2))
       (if game-state.lockable-dragons.DRAGON-RED?
-        (write :color 1 #(highlight-name-for-card [:DRAGON-RED 0]))
+        (do
+          (write :color 1 #(highlight-name-for-card [:DRAGON-RED 0]))
+          (write :hit 1 #[:LOCK-DRAGON 1 1]))
         (write :color 1 #:Comment))
       (write :draw 2 #(. green-text $2))
       (if game-state.lockable-dragons.DRAGON-GREEN?
-        (write :color 2 #(highlight-name-for-card [:DRAGON-GREEN 0]))
+        (do
+          (write :color 2 #(highlight-name-for-card [:DRAGON-GREEN 0]))
+          (write :hit 2 #[:LOCK-DRAGON 1 2]))
         (write :color 2 #:Comment))
       (write :draw 3 #(. white-text $2))
       (if game-state.lockable-dragons.DRAGON-WHITE?
-        (write :color 3 #(highlight-name-for-card [:DRAGON-WHITE 0]))
+        (do
+          (write :color 3 #(highlight-name-for-card [:DRAGON-WHITE 0]))
+          (write :hit 3 #[:LOCK-DRAGON 1 3]))
         (write :color 3 #:Comment)))
 
     ;; draw "can move here" markers

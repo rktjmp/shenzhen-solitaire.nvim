@@ -148,6 +148,28 @@
 (fn m.prev-location [game event]
   (shift-location game event :prev))
 
+(fn m.left-mouse [game event]
+  (let [{: location} event
+        [slot col card] location
+        next-card (if (= card 1)
+                    card
+                    (+ card 1))
+        match-fn (match [slot game.game-state.hand]
+                   ;; no hand, pick up directly
+                   [:tableau [nil]] #(match $2 [slot col card] true)
+                   ;; hand, we want to place down below the card hit
+                   ;; (ui shows last card but place is "after it")
+                   [:tableau [cards]] #(match $2 [slot col next-card] true)
+                   ;; foundation shows last card but place after it
+                   [:foundation [cards]] #(match $2 [slot col next-card] true)
+                   ;; cells only one card so dont adjust
+                   [_ _] #(match $2 [slot col card] true))
+        cursor (-> (E.filter game.game-state.valid-locations match-fn)
+                   (E.hd))]
+    (when cursor
+      (set game.game-state.cursor cursor)
+      (m.interact game event))))
+
 (fn m.interact [game event]
   (let [{: game-state } game
         {: logic-state} game
@@ -166,36 +188,36 @@
                                       [:err e] (error e)))
       ;; pick up is checked against logic state as we have had no effect yet
       [[nil] _] (match (logic.collect-from-ok? logic-state cursor)
-              [:ok] (let [[slot col-n card-n] cursor
-                          (rem hand) (E.split (. game-state slot col-n) card-n)]
-                      (tset game-state slot col-n rem)
-                      (tset game-state :hand [hand])
-                      (tset game-state :hand-from cursor)
-                      (tset game :game-state game-state))
-              [:err e] (error e))
+                 [:ok] (let [[slot col-n card-n] cursor
+                             (rem hand) (E.split (. game-state slot col-n) card-n)]
+                         (tset game-state slot col-n rem)
+                         (tset game-state :hand [hand])
+                         (tset game-state :hand-from cursor)
+                         (tset game :game-state game-state))
+                 [:err e] (error e))
       ;; place is checked against game state as we have technically altered it
       ;; kinda ugly hack so we can place back where we piced up even if it
       ;; makes an invalid sequence
       [[cards] _] (match [cursor hand-from (logic.can-place-ok? game-state cursor cards)]
                 ;; trying to put down where we pickd up, don't do any checks, just revert the state
-                [[s cl cd] [s cl cd] _]
-                (let [game-state (doto game-state
-                                   (tset :hand [])
-                                   (tset :hand-from []))
-                      new-game-state (m.game-state<-logic-state game-state logic-state)]
-                  (tset game :game-state new-game-state))
+                   [[s cl cd] [s cl cd] _]
+                   (let [game-state (doto game-state
+                                      (tset :hand [])
+                                      (tset :hand-from []))
+                         new-game-state (m.game-state<-logic-state game-state logic-state)]
+                     (tset game :game-state new-game-state))
                 ;; otherwise can we move?
-                [_ _ [:ok]]
-                (let [{: hand-from} game-state
-                      new-logic-state (logic.move-cards logic-state hand-from cursor)
-                      new-game-state (m.game-state<-logic-state game-state new-logic-state)]
-                  (tset new-game-state :hand [])
-                  (tset new-game-state :hand-from [])
-                  (doto game
-                    (tset :game-state new-game-state)
-                    (tset :logic-state new-logic-state)))
+                   [_ _ [:ok]]
+                   (let [{: hand-from} game-state
+                         new-logic-state (logic.move-cards logic-state hand-from cursor)
+                         new-game-state (m.game-state<-logic-state game-state new-logic-state)]
+                     (tset new-game-state :hand [])
+                     (tset new-game-state :hand-from [])
+                     (doto game
+                       (tset :game-state new-game-state)
+                       (tset :logic-state new-logic-state)))
                 ;; hard error here, ui shouldn't request bad things
-                [_ _ [:err e]] (error e)))
+                   [_ _ [:err e]] (error e)))
     (values game)))
 
 (local path-separator (string.match package.config "(.-)\n"))
@@ -254,7 +276,8 @@
                                    :dragon-white {:fg :#ffffff :bg :#292929}
                                    :dragon-red {:fg :#b34d4d :bg :#292929}}
                        :size {:width 80 :height 40}
-                       :keys {:move-right :o
+                       :keys {:left-mouse :<LeftMouse>
+                              :move-right :o
                               :move-left :m
                               :move-up :i
                               :move-down :n
@@ -286,11 +309,11 @@
     (set current-game {:logic-state logic-state
                        :game-state game-state
                        :view view}))
-    (m.tick-game current-game)
-    (m.draw-game current-game)
-    (values current-game))
+  (m.tick-game current-game)
+  (m.draw-game current-game)
+  (values current-game))
 
 (values M)
 
-(M.start-new-game 133)
+(M.start-new-game 20)
 (values nil)

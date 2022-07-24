@@ -7,7 +7,7 @@
 
 (fn M.new [config]
   "Create a new FBO containing a draw and color buffer."
-  ;; TODO accpet config size
+  ;; TODO accept config size
   (local config {:size {:width 80 :height 40}})
   (let [{: width : height} config.size
         map-positions (fn [val]
@@ -15,9 +15,11 @@
                                   #(enum/map #(iter/range 1 width)
                                              #val)))
         draw (map-positions " ")
-        color (map-positions "")]
+        color (map-positions "")
+        hit (map-positions [])]
     {:size {:width width :height height}
      :draw draw
+     :hit hit
      :color color}))
 
 (fn M.write [fbo buffer-name pos size f]
