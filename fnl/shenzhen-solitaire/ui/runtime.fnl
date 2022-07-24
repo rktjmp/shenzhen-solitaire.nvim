@@ -35,7 +35,7 @@
      ui-view :shenzhen-solitaire.ui.view)
 
 (local M {})
-(local m {:games []})
+(local m {})
 
 (fn m.generate-valid-locations [game-state]
   "Given a game state, find all board locations that the user may interact with.
@@ -90,24 +90,28 @@
                                      [[s x _] [s y _]] (< x y)
                                      [[x _ _] [y _ _]] (< x y)))))
                       ;; TODO Questionable decision to smush buttons here as "positions"
-                      ;; TODO: only when hand is empty
-                      (E.concat$ (if (not holding?)
-                                   (E.map [:DRAGON-RED :DRAGON-GREEN :DRAGON-WHITE]
-                                          (fn [i key]
-                                            (if (. game-state :lockable-dragons (.. key :?))
-                                              [:LOCK-DRAGON 1 i])))
-                                   [])))]
+                      (E.concat$ (-> (if holding? [:DRAGON-RED :DRAGON-GREEN :DRAGON-WHITE] [])
+                                     (E.map #(if (. game-state :lockable-dragons (.. $2 :?)) [:LOCK-DRAGON 1 $1])))))]
     (values locations)))
 
 (fn m.update [game]
-  (let [{: view : game-state} game
-        check-lock #(R.ok? (logic.lock-dragons-ok? game.logic-state $1))]
+  (if game.config.difficulty.auto-move-obvious
+    (while (R.ok? (logic.auto-move-ok? game.logic-state))
+      (let [[_ {: from : to}] (logic.auto-move-ok? game.logic-state)
+             logic-state (logic.move-cards game.logic-state from to)
+             game-state (m.update-game-state-with-logic-state game.game-state logic-state)]
+        (doto game
+          (tset :logic-state logic-state)
+          (tset :game-state game-state)))))
+
+  (let [{: game-state} game
+        lockable? #(R.ok? (logic.lock-dragons-ok? game.logic-state $1))]
     (doto game-state
       ;; valid locations is influenced by lockable dragons as we consider the
       ;; "buttons" valid locations, so this must be updated first.
-      (tset :lockable-dragons {:DRAGON-GREEN? (check-lock :DRAGON-GREEN)
-                               :DRAGON-RED? (check-lock :DRAGON-RED)
-                               :DRAGON-WHITE? (check-lock :DRAGON-WHITE)})
+      (tset :lockable-dragons {:DRAGON-GREEN? (lockable? :DRAGON-GREEN)
+                               :DRAGON-RED? (lockable? :DRAGON-RED)
+                               :DRAGON-WHITE? (lockable? :DRAGON-WHITE)})
       (tset :valid-locations (m.generate-valid-locations game-state)))
     (values game)))
 
@@ -143,29 +147,42 @@
 
 (fn m.left-mouse [game event]
   (let [{: location} event
-        [slot col card] location
-        next-card (if (= card 1)
-                    card
-                    (+ card 1))
-        match-fn (match [slot game.game-state.hand]
-                   ;; no hand, pick up directly
-                   [:tableau [nil]] #(match $2 [slot col card] true)
-                   ;; hand, we want to place down below the card hit
-                   ;; (ui shows last card but place is "after it")
-                   [:tableau [cards]] #(match $2 [slot col next-card] true)
-                   ;; foundation shows last card but place after it
-                   [:foundation [cards]] #(match $2 [slot col next-card] true)
-                   ;; cells only one card so dont adjust
-                   [_ _] #(match $2 [slot col card] true))
-        cursor (-> (E.filter game.game-state.valid-locations match-fn)
+        [click-slot click-col click-card] location
+        next-card (if (= click-card 1)
+                    click-card
+                    (+ click-card 1))
+        prev-card (if (= click-card 1)
+                    click-card
+                    (- click-card 1))
+        matches-click-location? (match [click-slot game.game-state.hand]
+                                  ;; no hand, pick up directly
+                                  [:tableau [nil]] #(match $2 [click-slot click-col click-card] true)
+                                  ;; hand, we want to place down below the card hit
+                                  ;; (ui shows last card but place is "after it")
+                                  [:tableau [cards]] #(match $2 [click-slot click-col next-card] true)
+                                  ;; foundation shows last card but place after it
+                                  [:foundation [cards]] #(match $2 [click-slot click-col next-card] true)
+                                  ;; cells only one card so dont adjust
+                                  [_ _] #(match $2 [click-slot click-col click-card] true))
+        ;; of all the valid locations, does the click location match one?
+        cursor (-> (E.filter game.game-state.valid-locations matches-click-location?)
                    (E.hd))]
     (when cursor
       (set game.game-state.cursor cursor)
       (m.interact game event))))
 
+(fn m.auto-move [game event]
+  (let [{: game-state : logic-state} game]
+    (match (logic.auto-move-ok? logic-state)
+      [:ok {: from : to}] (let [logic-state (logic.move-cards logic-state from to)
+                                game-state (m.update-game-state-with-logic-state game-state logic-state)]
+                            (doto game
+                              (tset :game-state game-state)
+                              (tset :logic-state logic-state)))))
+  (values game))
+
 (fn m.interact [game event]
-  (let [{: game-state } game
-        {: logic-state} game
+  (let [{: game-state : logic-state} game
         {: cursor : hand : hand-from} game-state]
     ;; TODO HACK button hack ...
     (match [hand cursor]
@@ -254,7 +271,7 @@
                               :gap 3}
                        :foundation {:pos {:row 1 :col 41}
                                     :gap 3}
-                       :highlight {:empty {:fg :grey}
+                       :highlight {:empty {:fg :grey :bg hl-normal-background}
                                    :coin {:fg :#e8df78 :bg hl-normal-background}
                                    :string {:fg :#879ff6 :bg hl-normal-background}
                                    :myriad {:fg :#23b3ac :bg hl-normal-background}
@@ -264,11 +281,13 @@
                                    :dragon-red {:fg :#d34d4d :bg hl-normal-background}}
                        :info {:pos {:row 20 :col 3}}
                        :size {:width 80 :height 40}
-                       :difficulty {:show-valid-locations false
+                       :cursor {:show true} ;; show cursor, strongly recommended without a mouse
+                       :difficulty {:show-valid-locations true ;; show possible interactive locations, useful without a mouse.
                                     :allow-undo false ;; TODO
                                     :auto-move-obvious true} ;; TODO
                        :keys {:left-mouse :<LeftMouse>
                               :interact :y
+                              :auto-move :a
                               :save-game :szw
                               :load-game :szl
                               ;; :restart-game :szr ;; TODO
@@ -319,16 +338,16 @@
                                             (false err) (values nil err)
                                             (true data) (values data)))
                          any (values nil (fmt "runtime did not know how to handle message %s" (inspect any))))
-                       (R.unit))]
-        (let [and-then (match result
-                         ;; dont recurse
-                         [:ok :goodbye] #(vim.notify :Goodbye!)
-                         [:ok] (do
-                                 (m.update game)
-                                 (m.draw game)
-                                 (values loop))
-                         [:err e] (values loop))]
-          (and-then (coroutine.yield result)))))
+                       (R.unit))
+            and-then (match result
+                       ;; dont recurse
+                       [:ok :goodbye] #(vim.notify :Goodbye!)
+                       [:ok] (do
+                               (m.update game)
+                               (m.draw game)
+                               (values loop))
+                       [:err e] (values loop))]
+        (and-then (coroutine.yield result))))
     ;; start the loop which will do noting and yield
     (loop :control :hello))
   (coroutine.create setup))

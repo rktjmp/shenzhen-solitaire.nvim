@@ -125,6 +125,7 @@
       ; (set-km :move-right "Move right")
       ; (set-km :move-left "Move left")
       (set-km :interact "Pick up, put down, interact")
+      (set-km :auto-move "Automatically move best cards")
 
       ;; Most events can just be passed though but mouse clicks need to actually translate
       ;; between the view data and runtime data.
@@ -169,6 +170,7 @@
               :cursor []
               :hl-ns (api.nvim_create_namespace :shenzhen-solitaire)
               :difficulty config.difficulty
+              :cursor config.cursor
               :layout {:size {:width 80 :height 40}
                        :info config.info
                        :tableau config.tableau
@@ -317,11 +319,12 @@
           (frame-buffer.write fbo :color pos {:width 1 :height 1} #:Comment))))
 
     ;; draw cursor
-    (let [{: row : col} (-> (adjust-location-for-pickup-or-putdown game-state.cursor)
-                            (game-location->view-pos view))
-          pos {:row (+ row 1) :col (- col 2)}]
-      (frame-buffer.write fbo :draw pos {:width 3 :height 1} #(match $2 1 "🯁" 2 "🯂" 3 "🯃"))
-      (frame-buffer.write fbo :color pos {:width 3 :height 1} #:Normal))
+    (if view.cursor.show
+      (let [{: row : col} (-> (adjust-location-for-pickup-or-putdown game-state.cursor)
+                              (game-location->view-pos view))
+            pos {:row (+ row 1) :col (- col 2)}]
+        (frame-buffer.write fbo :draw pos {:width 3 :height 1} #(match $2 1 "🯁" 2 "🯂" 3 "🯃"))
+        (frame-buffer.write fbo :color pos {:width 3 :height 1} #:Normal)))
 
     ;; output frame
     (api.nvim_buf_clear_namespace view.buf-id view.hl-ns 0 -1)
