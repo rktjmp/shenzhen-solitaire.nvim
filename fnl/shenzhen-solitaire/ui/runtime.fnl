@@ -205,7 +205,6 @@
   (let [{: location} event
         {: hand : hand-from} game.game-state
         holding? (match hand [nil] false [cards] true)]
-    (inspect! hand-from)
     (when holding?
       (set game.game-state.cursor hand-from)
       (m.interact game event))))
@@ -310,56 +309,18 @@
           (m.draw game)))
 
 (fn m.undo-last-move [game event]
-  ;; roll back to first move
-  (let [{: events} game.logic-state
-        ;; HACK hardcoded limit of 3 for new, shuffle, deal events
-        events (E.map #(iter/range 1 (math.max 3 (- (length events) 1))) #(. events $1))
-        new-logic-state (E.reduce events (logic.S.empty-state) #(logic.S.apply $1 $3))
-        new-game-state (m.update-game-state-with-logic-state {} new-logic-state)]
-          (tset game :logic-state new-logic-state)
-          (tset game :game-state new-game-state)
-          (m.update game)
-          (m.draw game)))
-
-(local hl-normal-background (let [{: background} (vim.api.nvim_get_hl_by_name :Normal true)
-                                  hex (fmt "#%x" background)]
-                              hex))
-
-(local default-config {:card {:size {:width 7 :height 5}
-                              :borders {:ne :╮ :nw :╭ :se :╯ :sw :╰ :n :─ :s :─ :e :│ :w :│}}
-                              ;:borders {:ne :🭌 :nw :🭈 :se :🭘 :sw :🭢 :n :🮒 :s :🮃 :e :🮋 :w :🮋}}
-                       :buttons {:pos {:row 1 :col 34}}
-                       :tableau {:pos {:row 7 :col 1}
-                                 :gap 3}
-                       :cell {:pos {:row 1
-                                    :col 1}
-                              :gap 3}
-                       :foundation {:pos {:row 1 :col 41}
-                                    :gap 3}
-                       :highlight {:empty {:fg :grey :bg hl-normal-background}
-                                   :coin {:fg :#e8df78 :bg hl-normal-background}
-                                   :string {:fg :#879ff6 :bg hl-normal-background}
-                                   :myriad {:fg :#23b3ac :bg hl-normal-background}
-                                   :flower {:fg :#934188 :bg hl-normal-background}
-                                   :dragon-green {:fg :#52ad56 :bg hl-normal-background}
-                                   :dragon-white {:fg :#cfcfcf :bg hl-normal-background}
-                                   :dragon-red {:fg :#d34d4d :bg hl-normal-background}}
-                       :info {:pos {:row 20 :col 3}}
-                       :size {:width 80 :height 40}
-                       :cursor {:show true} ;; show cursor, strongly recommended without a mouse
-                       :difficulty {:show-valid-locations true ;; show possible interactive locations, useful without a mouse.
-                                    :allow-undo false ;; TODO
-                                    :auto-move-obvious true}
-                       :keys {:left-mouse :<LeftMouse>
-                              :right-mouse :<RightMouse>
-                              :interact :y
-                              :auto-move :a
-                              :save-game :szw
-                              :load-game :szl
-                              :restart-game :szr
-                              :undo-last-move :u
-                              :next-location :<Tab>
-                              :prev-location :<S-Tab>}})
+  (if game.config.difficulty.allow-undo
+    ;; roll back to first move
+    (let [{: events} game.logic-state
+          ;; HACK hardcoded limit of 3 for new, shuffle, deal events
+          events (E.map #(iter/range 1 (math.max 3 (- (length events) 1))) #(. events $1))
+          new-logic-state (E.reduce events (logic.S.empty-state) #(logic.S.apply $1 $3))
+          new-game-state (m.update-game-state-with-logic-state {} new-logic-state)]
+            (tset game :logic-state new-logic-state)
+            (tset game :game-state new-game-state)
+            (m.update game)
+            (m.draw game))
+    (vim.notify "Undo not enabled, see difficulty.allow-undo")))
 
 (fn m.update-game-state-with-logic-state [game-state logic-state]
   "game-state is a mutation on the logic state with some parital changes
@@ -373,7 +334,7 @@
       (tset :lockable-dragons (or game-state.lockable-dragons []))
       (tset :valid-locations (or game-state.valid-locations [])))))
 
-(fn M.start-new-game [buf-id first-responder ?config ?seed]
+(fn M.start-new-game [buf-id first-responder config ?seed]
   "Generate a fresh game and return a coroutine which will handle events when resumed"
   (fn setup []
     ;; we want access to the coroutine thread for passing between responders,
@@ -381,7 +342,7 @@
     (local game {:logic-state nil
                  :game-state nil
                  :view nil
-                 :config (or ?config default-config)})
+                 :config config})
     (let [thread (coroutine.running)
           responder #(first-responder thread $...)]
       ;; setup the inital game state and bang
@@ -420,12 +381,3 @@
   (coroutine.create setup))
 
 (values M)
-
-(let [thread (M.start-new-game 2 (fn [thread event]
-                                   (match (coroutine.resume thread :event event)
-                                     (true [:ok _]) nil
-                                     (true [:err e]) (error (.. e (debug.traceback thread)))
-                                     (false e) (error (.. e (debug.traceback thread))))))]
-  (assert (coroutine.resume thread :control :hello)))
-
-(values nil)

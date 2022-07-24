@@ -22,6 +22,7 @@
   (let [[kind _] card]
     (match kind
       :EMPTY :SHZHCardEmpty
+      :BUTTON :SHZHButton
       :COIN :SHZHCardCoin
       :STRING :SHZHCardString
       :MYRIAD :SHZHCardMyriad
@@ -93,6 +94,7 @@
   (fn define-highlight-groups [highlight-config]
     (let [set-hl #(api.nvim_set_hl 0 (highlight-name-for-card [$1 0]) $2)]
       (set-hl :EMPTY highlight-config.empty)
+      (set-hl :BUTTON highlight-config.button)
       (set-hl :COIN highlight-config.coin)
       (set-hl :STRING highlight-config.string)
       (set-hl :MYRIAD highlight-config.myriad)
@@ -299,19 +301,19 @@
         (do
           (write :color 1 #(highlight-name-for-card [:DRAGON-RED 0]))
           (write :hit 1 #[:LOCK-DRAGON 1 1]))
-        (write :color 1 #:Comment))
+        (write :color 1 #(highlight-name-for-card [:BUTTON 0])))
       (write :draw 2 #(. green-text $2))
       (if game-state.lockable-dragons.DRAGON-GREEN?
         (do
           (write :color 2 #(highlight-name-for-card [:DRAGON-GREEN 0]))
           (write :hit 2 #[:LOCK-DRAGON 1 2]))
-        (write :color 2 #:Comment))
+        (write :color 2 #(highlight-name-for-card [:BUTTON 0])))
       (write :draw 3 #(. white-text $2))
       (if game-state.lockable-dragons.DRAGON-WHITE?
         (do
           (write :color 3 #(highlight-name-for-card [:DRAGON-WHITE 0]))
           (write :hit 3 #[:LOCK-DRAGON 1 3]))
-        (write :color 3 #:Comment)))
+        (write :color 3 #(highlight-name-for-card [:BUTTON 0]))))
 
     ;; draw "can move here" markers
     (if view.difficulty.show-valid-locations
@@ -320,7 +322,7 @@
                                 (game-location->view-pos view))
               pos {:row (+ row 1) :col (- col 2)}]
           (frame-buffer.write fbo :draw pos {:width 1 :height 1} #"▸")
-          (frame-buffer.write fbo :color pos {:width 1 :height 1} #:Comment))))
+          (frame-buffer.write fbo :color pos {:width 1 :height 1} #(highlight-name-for-card [:BUTTON 0])))))
 
     ;; draw cursor
     (if view.cursor.show
