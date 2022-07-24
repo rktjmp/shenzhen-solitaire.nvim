@@ -14,6 +14,7 @@
      ui-card :shenzhen-solitaire.ui.card)
 
 (var FBO-HIT-HACK nil)
+(var CURSOR-HACK nil)
 (local api vim.api)
 (local M {})
 
@@ -58,7 +59,7 @@
                                              (+ layout.foundation.gap layout.card.size.width)))}
       ;; cursor is as-would be but shifted over, locations for held cards are actually one past
       ;; the end of the columns, so we must knock back a card for nicer alignment
-      [:hand col-n card-n] (let [[slot cur-col-n cur-card-n] view.cursor
+      [:hand col-n card-n] (let [[slot cur-col-n cur-card-n] CURSOR-HACK
                                  {: row : col} (game-location->view-pos [slot cur-col-n (-> (- cur-card-n 1)
                                                                                              (+ card-n))]
                                                                         view)]
@@ -166,8 +167,6 @@
         ;; maintain any actual game state.
         view {: buf-id
               : responder
-              ;; TODO remove cursor from view, it's derived from the cursor position in the game state
-              :cursor []
               :hl-ns (api.nvim_create_namespace :shenzhen-solitaire)
               :difficulty config.difficulty
               :cursor config.cursor
@@ -207,6 +206,8 @@
     (values view)))
 
 (fn M.update [view game-state]
+  ;; TODO pref (update view game-state) (draw view tick)
+  (set CURSOR-HACK game-state.cursor)
   view)
 
 (fn game-card->ui-card [view game-card location]
@@ -230,7 +231,6 @@
   ;; Apply highlights by consecutive run instead of per-position
   ;; Track "damage" diff against last fb and only re-write where we need to
   ;; TODO remove cursor from view, it's derived from the cursor position in the game state
-  (tset view :cursor game-state.cursor)
   (fn draw-card [fbo card location]
     (let [{: pos : size : bitmap : highlight} card
           edge-hl :Normal
@@ -277,7 +277,7 @@
                           (enum/pairs->table)))
     (for-each-game-card
       (fn [card location]
-        (let [pos (game-location->view-pos location view)]
+        (let [pos (game-location->view-pos location view game-state.cursor)]
           (tset view :cards card :highlight (highlight-name-for-card card))
           (tset view :cards card :pos pos))
         (draw-card fbo (. view :cards card) location)))
