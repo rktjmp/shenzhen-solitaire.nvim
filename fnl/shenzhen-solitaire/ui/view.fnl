@@ -273,9 +273,9 @@
     ;; bottom, this gives us the correct z-indexing
 
     ;; draw info, this is lower than the cards so stacks can over-write it
-    ; (let [info-string (fmt "wins: %d moves: %d" 10 (- (length game-state.events) 3))
-    ;       info (icollect [c (string.gmatch info-string ".")] c)]
-    ;   (frame-buffer.write fbo :draw view.layout.info.pos {:height 1 :width (length info)} #(. info $2)))
+    (let [info-string (fmt "wins: %d moves: %d" game-state.wins (- (length game-state.events) 3))
+          info (icollect [c (string.gmatch info-string ".")] c)]
+      (frame-buffer.write fbo :draw view.layout.info.pos {:height 1 :width (length info)} #(. info $2)))
 
     ;; HACK TODO remove this, needed wor when we load a game and the cards
     ;; lookup holds references to older cards

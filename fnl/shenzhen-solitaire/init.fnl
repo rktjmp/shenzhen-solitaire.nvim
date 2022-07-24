@@ -26,12 +26,12 @@
                                    :dragon-green {:fg :#52ad56 :bg hl-normal-background}
                                    :dragon-white {:fg :#cfcfcf :bg hl-normal-background}
                                    :dragon-red {:fg :#d34d4d :bg hl-normal-background}}
-                       :info {:pos {:row 20 :col 3}}
+                       :info {:pos {:row 22 :col 3}}
                        :size {:width 80 :height 40}
                        :cursor {:show true} ;; show cursor, strongly recommended without a mouse
                        :difficulty {:show-valid-locations true ;; show possible interactive locations, useful without a mouse.
                                     :allow-undo false
-                                    :auto-move-obvious false}
+                                    :auto-move-obvious true}
                        :keys {:left-mouse :<LeftMouse>
                               :right-mouse :<RightMouse>
                               :interact :y

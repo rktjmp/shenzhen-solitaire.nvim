@@ -34,6 +34,12 @@
      logic :shenzhen-solitaire.game.logic
      ui-view :shenzhen-solitaire.ui.view)
 
+(local path-separator (string.match package.config "(.-)\n"))
+(lambda join-path [head ...]
+  (accumulate [t head _ part (ipairs [...])]
+    (.. t path-separator part)))
+(local win-count-path (join-path (vim.fn.stdpath :cache) :shenzhen-solitaire.wins))
+
 (local M {})
 (local m {})
 
@@ -107,23 +113,31 @@
   (if game.config.difficulty.auto-move-obvious
     (while (R.ok? (logic.auto-move-ok? game.logic-state))
       (let [[_ {: from : to}] (logic.auto-move-ok? game.logic-state)
-             logic-state (logic.move-cards game.logic-state from to)
-             game-state (m.update-game-state-with-logic-state game.game-state logic-state)]
+            logic-state (logic.move-cards game.logic-state from to)
+            game-state (m.update-game-state-with-logic-state game.game-state logic-state)]
         (doto game
           (tset :logic-state logic-state)
           (tset :game-state game-state)))))
 
   (let [{: game-state} game
-        lockable? #(R.ok? (logic.lock-dragons-ok? game.logic-state $1))]
+        lockable? #(R.ok? (logic.lock-dragons-ok? game.logic-state $1))
+        won? (R.ok? (logic.win-game-ok? game.logic-state))]
     (doto game-state
       ;; valid locations is influenced by lockable dragons as we consider the
       ;; "buttons" valid locations, so this must be updated first.
       (tset :lockable-dragons {:DRAGON-GREEN? (lockable? :DRAGON-GREEN)
                                :DRAGON-RED? (lockable? :DRAGON-RED)
                                :DRAGON-WHITE? (lockable? :DRAGON-WHITE)})
-      (tset :valid-locations (m.generate-valid-locations game-state)))
-  (ui-view.update game.view game.game-state)
-  (values game)))
+      (tset :valid-locations (m.generate-valid-locations game-state))
+      (tset :won? won?))
+    (ui-view.update game.view game.game-state)
+    (when won?
+      (tset game-state :wins (+ 1 game-state.wins))
+      (let [readable? (= 1 (vim.fn.filereadable win-count-path))
+            count (if readable? (+ (dofile win-count-path) 1) 1)]
+        (with-open [fout (io.open win-count-path :w)]
+          (fout:write (fmt "return %d" count)))))
+    (values game)))
 
 (fn m.draw [game]
   (let [{: view : game-state} game]
@@ -268,11 +282,6 @@
                     [_ _ [:err e]] (error e)))
     (values game)))
 
-(local path-separator (string.match package.config "(.-)\n"))
-(lambda join-path [head ...]
-  (accumulate [t head _ part (ipairs [...])]
-              (.. t path-separator part)))
-
 (fn m.save-game [game event]
   (let [save-file (join-path (vim.fn.stdpath :cache) :shenzhen-solitaire.save)]
     (with-open [fout (io.open save-file :w)]
@@ -328,6 +337,8 @@
   as cursor position, valid moves, cards-in-hand-or-not etc."
   (let [new-game-state (logic.S.clone-state logic-state)]
     (doto new-game-state
+      (tset :wins (or game-state.wins 0))
+      (tset :won? (or game-state.won? false))
       (tset :cursor (or game-state.cursor [:tableau 1 5]))
       (tset :hand (or game-state.hand []))
       (tset :hand-from (or game-state.hand-from []))
@@ -344,10 +355,12 @@
                  :view nil
                  :config config})
     (let [thread (coroutine.running)
-          responder #(first-responder thread $...)]
+          responder #(first-responder thread $...)
+          readable? (= 1 (vim.fn.filereadable win-count-path))
+          count (if readable? (dofile win-count-path) 0)]
       ;; setup the inital game state and bang
       (set game.logic-state (logic.start-new-game ?seed))
-      (set game.game-state (m.update-game-state-with-logic-state {} game.logic-state))
+      (set game.game-state (m.update-game-state-with-logic-state {:wins count} game.logic-state))
       (set game.view (-> (ui-view.new buf-id responder game.config)
                          (ui-view.update game.game-state)))
       (m.update game)

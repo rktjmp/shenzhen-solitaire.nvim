@@ -407,8 +407,15 @@
         (R.ok {: from : to}))
       (R.err "no auto-move found"))))
 
-(fn M.win-game [state]
-  (error :not-implemented))
+(fn M.win-game-ok? [state]
+  (let [tableau-cards (-> (enum.flat-map #(iter/range 1 8)
+                                         (fn [col-n] (enum.map #(iter/range 1 40)
+                                                               #[:tableau col-n $1])))
+                          (enum.map #(location->card state $2)))]
+    (if (= 0 (length tableau-cards))
+      ;; doesn't really need to be wrapped but we will for consistency.
+      (R.ok true)
+      (R.err false))))
 
 (tset M :S S)
 (values M)
