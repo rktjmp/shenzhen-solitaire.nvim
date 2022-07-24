@@ -295,6 +295,32 @@
           (m.draw game)))
       (error "Could not open save file, probably doesn't exist"))))
 
+(fn m.restart-game [game event]
+  ;; roll back to first move
+  (let [{: events} game.logic-state
+        events (accumulate [(initial-events stop?) (values [] false) _ event (ipairs events) :until stop?]
+                 (match event
+                   [:moved-cards] (values initial-events true)
+                   _ (values (E.append$ initial-events event) false)))
+        new-logic-state (E.reduce events (logic.S.empty-state) #(logic.S.apply $1 $3))
+        new-game-state (m.update-game-state-with-logic-state {} new-logic-state)]
+          (tset game :logic-state new-logic-state)
+          (tset game :game-state new-game-state)
+          (m.update game)
+          (m.draw game)))
+
+(fn m.undo-last-move [game event]
+  ;; roll back to first move
+  (let [{: events} game.logic-state
+        ;; HACK hardcoded limit of 3 for new, shuffle, deal events
+        events (E.map #(iter/range 1 (math.max 3 (- (length events) 1))) #(. events $1))
+        new-logic-state (E.reduce events (logic.S.empty-state) #(logic.S.apply $1 $3))
+        new-game-state (m.update-game-state-with-logic-state {} new-logic-state)]
+          (tset game :logic-state new-logic-state)
+          (tset game :game-state new-game-state)
+          (m.update game)
+          (m.draw game)))
+
 (local hl-normal-background (let [{: background} (vim.api.nvim_get_hl_by_name :Normal true)
                                   hex (fmt "#%x" background)]
                               hex))
@@ -330,7 +356,8 @@
                               :auto-move :a
                               :save-game :szw
                               :load-game :szl
-                              ; :restart-game :szr ;; TODO
+                              :restart-game :szr
+                              :undo-last-move :u
                               :next-location :<Tab>
                               :prev-location :<S-Tab>}})
 

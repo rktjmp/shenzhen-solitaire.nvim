@@ -121,6 +121,8 @@
 
       (set-km :save-game "Save current game")
       (set-km :load-game "Load last saved game")
+      (set-km :restart-game "Restart current game")
+      (set-km :undo-last-move "Undo last move")
       (set-km :next-location "Move to next location")
       (set-km :prev-location "Move to previous location")
       ; (set-km :move-right "Move right")
@@ -148,7 +150,6 @@
                                               #(let [{: winid :column byte-offset :line row} (vim.fn.getmousepos)
                                                      x (vim.api.nvim_eval eval-er)
                                                      col (byte-offset->col row byte-offset)]
-                                                 (inspect! (vim.fn.getmousepos))
                                                  ;; map col row to location, this
                                                  ;; may fail as click can be
                                                  ;; outside the buffer when
