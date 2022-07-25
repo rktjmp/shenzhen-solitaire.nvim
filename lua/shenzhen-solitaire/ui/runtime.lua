@@ -296,7 +296,8 @@
 
  local events = vim.mpack.decode(bytes) local new_logic_state
  local function _137_(_241, _242, _243) return logic.S.apply(_241, _243) end new_logic_state = E.reduce(events, logic.S["empty-state"](), _137_)
- local new_game_state = m["update-game-state-with-logic-state"]({}, new_logic_state)
+ local new_game_state = m["update-game-state-with-logic-state"]({wins = game["game-state"].wins}, new_logic_state)
+
  do end (game)["logic-state"] = new_logic_state
  game["game-state"] = new_game_state
  m.update(game)
@@ -311,7 +312,8 @@
  initial_events, stop_3f = initial_events, true elseif true then local _0 = _140_
  initial_events, stop_3f = E["append$"](initial_events, event0), false else initial_events, stop_3f = nil end end events0 = initial_events, stop_3f end local new_logic_state
  local function _142_(_241, _242, _243) return logic.S.apply(_241, _243) end new_logic_state = E.reduce(events0, logic.S["empty-state"](), _142_)
- local new_game_state = m["update-game-state-with-logic-state"]({}, new_logic_state)
+ local new_game_state = m["update-game-state-with-logic-state"]({wins = game["game-state"].wins}, new_logic_state)
+
  do end (game)["logic-state"] = new_logic_state
  game["game-state"] = new_game_state
  m.update(game)
@@ -324,7 +326,8 @@
 
  local function _144_() return iter_2frange(1, math.max(3, (#events - 1))) end local function _145_(_241) return events[_241] end events0 = E.map(_144_, _145_) local new_logic_state
  local function _146_(_241, _242, _243) return logic.S.apply(_241, _243) end new_logic_state = E.reduce(events0, logic.S["empty-state"](), _146_)
- local new_game_state = m["update-game-state-with-logic-state"]({}, new_logic_state)
+ local new_game_state = m["update-game-state-with-logic-state"]({wins = game["game-state"].wins}, new_logic_state)
+
  do end (game)["logic-state"] = new_logic_state
  game["game-state"] = new_game_state
  m.update(game)
