@@ -41,6 +41,7 @@ cards of that type to an unoccupied cell. Once this is done that cell is locked.
 
 Open a new buffer and run `:ShenzhenSolitaireNewGame` to play, or call `:lua
 require("shenzhen-solitaire")["start-new-game"](buf-id config seed-number)`.
+The command accepts an optional seed number.
 
 The game will automatically move the `ƒ` to its foundation, as well as any
 suited cards to a foundation if there are no other cards of lower value in
