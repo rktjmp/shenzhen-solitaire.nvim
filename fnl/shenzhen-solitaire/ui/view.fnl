@@ -18,7 +18,7 @@
 (local api vim.api)
 (local M {})
 
-(fn highlight-name-for-card [card]
+(fn highlight-group-for-component [card]
   (let [[kind _] card]
     (match kind
       :EMPTY :SHZHCardEmpty
@@ -92,7 +92,7 @@
 
   Returns table describing view."
   (fn define-highlight-groups [highlight-config]
-    (let [set-hl #(api.nvim_set_hl 0 (highlight-name-for-card [$1 0]) $2)]
+    (let [set-hl #(api.nvim_set_hl 0 (highlight-group-for-component [$1 0]) $2)]
       (set-hl :EMPTY highlight-config.empty)
       (set-hl :BUTTON highlight-config.button)
       (set-hl :COIN highlight-config.coin)
@@ -191,7 +191,7 @@
       position on the screen as well as additional data such as symbols and
       colors."
       (let [pos (game-location->view-pos location view)
-            hl (highlight-name-for-card game-card)
+            hl (highlight-group-for-component game-card)
             data {:pos pos
                   :size config.card.size
                   :borders config.card.borders
@@ -223,7 +223,7 @@
   position on the screen as well as additional data such as symbols and
   colors."
   (let [pos (game-location->view-pos location view)
-        hl (highlight-name-for-card game-card)
+        hl (highlight-group-for-component game-card)
         data {:pos pos
               :size view.layout.card.size
               :borders view.layout.card.borders
@@ -284,7 +284,7 @@
     (for-each-game-card
       (fn [card location]
         (let [pos (game-location->view-pos location view game-state.cursor)]
-          (tset view :cards card :highlight (highlight-name-for-card card))
+          (tset view :cards card :highlight (highlight-group-for-component card))
           (tset view :cards card :pos pos))
         (draw-card fbo (. view :cards card) location)))
 
@@ -299,21 +299,21 @@
       (write :draw 1 #(. red-text $2))
       (if game-state.lockable-dragons.DRAGON-RED?
         (do
-          (write :color 1 #(highlight-name-for-card [:DRAGON-RED 0]))
+          (write :color 1 #(highlight-group-for-component [:DRAGON-RED 0]))
           (write :hit 1 #[:LOCK-DRAGON 1 1]))
-        (write :color 1 #(highlight-name-for-card [:BUTTON 0])))
+        (write :color 1 #(highlight-group-for-component [:BUTTON 0])))
       (write :draw 2 #(. green-text $2))
       (if game-state.lockable-dragons.DRAGON-GREEN?
         (do
-          (write :color 2 #(highlight-name-for-card [:DRAGON-GREEN 0]))
+          (write :color 2 #(highlight-group-for-component [:DRAGON-GREEN 0]))
           (write :hit 2 #[:LOCK-DRAGON 1 2]))
-        (write :color 2 #(highlight-name-for-card [:BUTTON 0])))
+        (write :color 2 #(highlight-group-for-component [:BUTTON 0])))
       (write :draw 3 #(. white-text $2))
       (if game-state.lockable-dragons.DRAGON-WHITE?
         (do
-          (write :color 3 #(highlight-name-for-card [:DRAGON-WHITE 0]))
+          (write :color 3 #(highlight-group-for-component [:DRAGON-WHITE 0]))
           (write :hit 3 #[:LOCK-DRAGON 1 3]))
-        (write :color 3 #(highlight-name-for-card [:BUTTON 0]))))
+        (write :color 3 #(highlight-group-for-component [:BUTTON 0]))))
 
     ;; draw "can move here" markers
     (if view.difficulty.show-valid-locations
@@ -322,7 +322,7 @@
                                 (game-location->view-pos view))
               pos {:row (+ row 1) :col (- col 2)}]
           (frame-buffer.write fbo :draw pos {:width 1 :height 1} #"▸")
-          (frame-buffer.write fbo :color pos {:width 1 :height 1} #(highlight-name-for-card [:BUTTON 0])))))
+          (frame-buffer.write fbo :color pos {:width 1 :height 1} #(highlight-group-for-component [:BUTTON 0])))))
 
     ;; draw cursor
     (if view.cursor.show
