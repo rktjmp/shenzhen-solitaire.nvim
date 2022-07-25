@@ -296,7 +296,8 @@
         (let [bytes (fin:read :*a)
               events (vim.mpack.decode bytes)
               new-logic-state (E.reduce events (logic.S.empty-state) #(logic.S.apply $1 $3))
-              new-game-state (m.update-game-state-with-logic-state {} new-logic-state)]
+              new-game-state (m.update-game-state-with-logic-state {:wins game.game-state.wins}
+                                                                   new-logic-state)]
           (tset game :logic-state new-logic-state)
           (tset game :game-state new-game-state)
           (m.update game)
@@ -311,11 +312,12 @@
                    [:moved-cards] (values initial-events true)
                    _ (values (E.append$ initial-events event) false)))
         new-logic-state (E.reduce events (logic.S.empty-state) #(logic.S.apply $1 $3))
-        new-game-state (m.update-game-state-with-logic-state {} new-logic-state)]
-          (tset game :logic-state new-logic-state)
-          (tset game :game-state new-game-state)
-          (m.update game)
-          (m.draw game)))
+        new-game-state (m.update-game-state-with-logic-state {:wins game.game-state.wins}
+                                                             new-logic-state)]
+       (tset game :logic-state new-logic-state)
+       (tset game :game-state new-game-state)
+       (m.update game)
+       (m.draw game)))
 
 (fn m.undo-last-move [game event]
   (if game.config.difficulty.allow-undo
@@ -324,11 +326,12 @@
           ;; HACK hardcoded limit of 3 for new, shuffle, deal events
           events (E.map #(iter/range 1 (math.max 3 (- (length events) 1))) #(. events $1))
           new-logic-state (E.reduce events (logic.S.empty-state) #(logic.S.apply $1 $3))
-          new-game-state (m.update-game-state-with-logic-state {} new-logic-state)]
-            (tset game :logic-state new-logic-state)
-            (tset game :game-state new-game-state)
-            (m.update game)
-            (m.draw game))
+          new-game-state (m.update-game-state-with-logic-state {:wins game.game-state.wins}
+                                                               new-logic-state)]
+         (tset game :logic-state new-logic-state)
+         (tset game :game-state new-game-state)
+         (m.update game)
+         (m.draw game))
     (vim.notify "Undo not enabled, see difficulty.allow-undo")))
 
 (fn m.update-game-state-with-logic-state [game-state logic-state]
