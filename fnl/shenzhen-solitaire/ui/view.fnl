@@ -7,7 +7,7 @@
      {: inspect!} :shenzhen-solitaire.lib.donut.inspect
      {: map : each : flat-map : flatten
       : split : pairs->table : set$ : reduce} :shenzhen-solitaire.lib.donut.enum :ns enum
-     e :shenzhen-solitaire.lib.donut.enum
+     E :shenzhen-solitaire.lib.donut.enum
      {: start-new-game} :shenzhen-solitaire.game.logic
      {:format fmt} string
      frame-buffer :shenzhen-solitaire.ui.frame-buffer
@@ -21,7 +21,7 @@
 (fn highlight-group-for-component [card]
   (let [[kind _] card]
     (match kind
-      :EMPTY :SHZHCardEmpty
+      :EMPTY :SHZHEmptyLocation
       :BUTTON :SHZHButton
       :COIN :SHZHCardCoin
       :STRING :SHZHCardString
@@ -62,7 +62,7 @@
       ;; the end of the columns, so we must knock back a card for nicer alignment
       [:hand col-n card-n] (let [[slot cur-col-n cur-card-n] CURSOR-HACK
                                  {: row : col} (game-location->view-pos [slot cur-col-n (-> (- cur-card-n 1)
-                                                                                             (+ card-n))]
+                                                                                            (+ card-n))]
                                                                         view)]
                              {:row row :col (+ col 1)})
       ;; UGLY HACK TODO
@@ -115,7 +115,7 @@
                                             :desc $2})]
       ;; TODO set no-mod, etc
       (let [buf-opts {:filetype :shenzhen-solitaire}
-           win-opts {:cursorline false :number false :list false :relativenumber false}]
+            win-opts {:cursorline false :number false :list false :relativenumber false}]
         (enum/map buf-opts #(api.nvim_buf_set_option buf-id $1 $2))
         (api.nvim_buf_call buf-id
                            #(let [win-id (api.nvim_get_current_win)]
@@ -136,7 +136,7 @@
       ;; between the view data and runtime data.
       (fn byte-offset->col [row target-byte-offset]
         ;; or here for clicks outside of window/range which shoujd just no-op
-        (let [[_ index] (e.reduce (or (. FBO-HIT-HACK :draw row) []) [0 0]
+        (let [[_ index] (E.reduce (or (. FBO-HIT-HACK :draw row) []) [0 0]
                                   (fn [[byte-count index] i bytes]
                                     (if (<= target-byte-offset byte-count)
                                       [byte-count index]
@@ -147,23 +147,23 @@
 
       (fn bind-mouse [lhs event-name desc]
         (let [eval-er (fmt "\"\\%s\"" lhs)]
-        (api.nvim_buf_set_keymap buf-id :n lhs ""
-                                 {:callback (vim.schedule_wrap
-                                              #(let [{: winid :column byte-offset :line row} (vim.fn.getmousepos)
-                                                     x (vim.api.nvim_eval eval-er)
-                                                     col (byte-offset->col row byte-offset)]
-                                                 ;; map col row to location, this
-                                                 ;; may fail as click can be
-                                                 ;; outside the buffer when
-                                                 ;; switching.
-                                                 (if (= winid view.winid)
-                                                   ;; clicked in same win, send event
-                                                   (match (?. FBO-HIT-HACK :hit row col)
-                                                     (where loc (< 0 (length loc)))
-                                                     (responder {:name event-name :location loc :view view}))
-                                                   ;; different win, pass would-be click
-                                                   (vim.cmd (.. "normal! " x)))))
-                                  :desc desc})))
+         (api.nvim_buf_set_keymap buf-id :n lhs ""
+                                  {:callback (vim.schedule_wrap
+                                               #(let [{: winid :column byte-offset :line row} (vim.fn.getmousepos)
+                                                      x (vim.api.nvim_eval eval-er)
+                                                      col (byte-offset->col row byte-offset)]
+                                                  ;; map col row to location, this
+                                                  ;; may fail as click can be
+                                                  ;; outside the buffer when
+                                                  ;; switching.
+                                                  (if (= winid view.winid)
+                                                    ;; clicked in same win, send event
+                                                    (match (?. FBO-HIT-HACK :hit row col)
+                                                      (where loc (< 0 (length loc)))
+                                                      (responder {:name event-name :location loc :view view}))
+                                                    ;; different win, pass would-be click
+                                                    (vim.cmd (.. "normal! " x)))))
+                                   :desc desc})))
       (bind-mouse :<LeftMouse> :left-mouse "Inferred action for left mouse")
       (bind-mouse :<RightMouse> :right-mouse "Inferred action for right mouse")))
 
@@ -266,7 +266,7 @@
         _ (set FBO-HIT-HACK fbo)
         for-each-game-card #(map-game-state-cards game-state $1)]
     ;; render out card slot placeholders
-    (e.each view.placeholders #(let [[card location] $2]
+    (E.each view.placeholders #(let [[card location] $2]
                                  (draw-card fbo card location)))
     ;; update our ui-card positions to reflect where they are in the game state
     ;; render cards out according to the tableau, so that's left to right top to
