@@ -36,7 +36,7 @@
       :DRAGON-GREEN :SHZHCardDragonGreen
       :DRAGON-WHITE :SHZHCardDragonWhite)))
 
-(fn game-location->view-pos [location layout cursor]
+(fn game-location->view-pos [location layout cursor-location]
   "Convert a game location [slot col-n card-n] into {: row : col}."
   (match location
     [:tableau col-n card-n] {:row (+ layout.tableau.pos.row (* (- card-n 1) 2))
@@ -64,10 +64,10 @@
                                            (+ layout.foundation.gap layout.card.size.width)))}
     ;; cursor is as-would be but shifted over, locations for held cards are actually one past
     ;; the end of the columns, so we must knock back a card for nicer alignment
-    [:hand col-n card-n] (let [[slot cur-col-n cur-card-n] CURSOR-HACK
+    [:hand col-n card-n] (let [[slot cur-col-n cur-card-n] cursor-location
                                {: row : col} (game-location->view-pos [slot cur-col-n (-> (- cur-card-n 1)
                                                                                           (+ card-n))]
-                                                                      layout cursor)]
+                                                                      layout cursor-location)]
                            {:row row :col (+ col 1)})
     ;; UGLY HACK TODO
     ;; we use this to work out where to put the cursor, but the adjustments here are
@@ -90,13 +90,13 @@
                                      (fn [card-n card]
                                        (f card [slot col-n card-n]))))))))
 
-(fn game-card->ui-card [game-card location layout]
+(fn game-card->ui-card [game-card location layout cursor-location]
   "Cards are effectively singletons both in the logic and in the UI, so we can
   stably generate a map of game-cards - really just a type, value and an
   abstract position somewhere - and ui cards - which have a more definite
   position on the screen as well as additional data such as symbols and
   colors."
-  (let [pos (game-location->view-pos location layout)
+  (let [pos (game-location->view-pos location layout cursor-location)
         hl (highlight-group-for-component game-card)
         data {:pos pos
               :size layout.card.size
@@ -117,8 +117,8 @@
               :winid (api.nvim_buf_call buf-id api.nvim_get_current_win)
               : responder
               :hl-ns (api.nvim_create_namespace :shenzhen-solitaire)
-              :difficulty config.difficulty
-              :draw-cursor config.cursor.show
+              :show {:cursor config.cursor.show
+                     :valid-locations config.difficulty.show-valid-locations}
               :locations {} ;; TBD in first update call
               :meta {}
               :layout {:size {:width 80 :height 40}
@@ -127,16 +127,24 @@
                        :foundation config.foundation
                        :cell config.cell
                        :buttons config.buttons
-                       :card config.card}
-              :config config}] ;; TODO remove
-    (tset view :cards (-> (map-game-state-cards state #(game-card->ui-card $1 $2 view.layout))
+                       :card config.card}}
+        ;; If any cards are in-hand at this point, we'll just fake a location
+        ;; for the current cursor. The first update call should correct any of
+        ;; this, though we may get animation quirks.
+        stand-in-cursor-location [:tableau 1 5]]
+    (tset view :cards (-> (map-game-state-cards state #(game-card->ui-card $1 $2
+                                                                           view.layout
+                                                                           stand-in-cursor-location))
                           (enum/pairs->table)))
     (tset view :placeholders (-> [(enum/map #(iter/range 1 8) #[:tableau $1 1])
                                   (enum/map #(iter/range 1 3) #[:cell $1 1])
                                   (enum/map #(iter/range 1 4) #[:foundation $1 1])]
                                  (enum/flatten)
                                  (enum/map (fn [_ location]
-                                             (let [[_ ui-card] (game-card->ui-card [:EMPTY 0] location view.layout)]
+                                             (let [[_ ui-card] (game-card->ui-card [:EMPTY 0]
+                                                                                   location
+                                                                                   view.layout
+                                                                                   stand-in-cursor-location)]
                                                (values [ui-card location]))))))
 
     (let [set-hl #(api.nvim_set_hl 0 (highlight-group-for-component [$1 0]) $2)]
@@ -191,10 +199,8 @@
               cb (vim.schedule_wrap
                    #(let [{: winid :column byte-offset :line row} (vim.fn.getmousepos)
                           col (byte-offset->col row byte-offset)]
-                      ;; map col row to location, this
-                      ;; may fail as click can be
-                      ;; outside the buffer when
-                      ;; switching.
+                      ;; map col row to location, this may fail as click can be
+                      ;; outside the buffer when switching.
                       (if (= winid view.winid)
                         ;; clicked in same win, send event
                         (match (?. FBO-HIT-HACK :hit row col)
@@ -212,7 +218,7 @@
   ;; run through all cards and update their positions
   (let [update-card (fn [game-card location]
                       (let [ui-card (. view.cards game-card)]
-                        (tset ui-card :pos (game-location->view-pos location view.layout))))]
+                        (tset ui-card :pos (game-location->view-pos location view.layout locations.cursor))))]
     ;; just copy meta data over directly I guess
     (tset view :meta {:wins meta.wins
                       :won? meta.won?
@@ -273,7 +279,7 @@
 
     (map-game-state-cards state
       (fn [card location]
-        (let [pos (game-location->view-pos location view.layout state.cursor)]
+        (let [pos (game-location->view-pos location view.layout state.cursor view.locations.cursor)]
           (tset view :cards card :highlight (highlight-group-for-component card))
           (tset view :cards card :pos pos))
         (draw-card fbo (. view :cards card) location)))
@@ -316,18 +322,22 @@
         (write :color 3 #(highlight-group-for-component [:BUTTON 0]))))
 
     ;; draw "can move here" markers
-    (if view.difficulty.show-valid-locations
+    (if view.show.valid-locations
       (each [i location (ipairs view.locations.cards)]
         (let [{: row : col} (-> ;(adjust-location-for-pickup-or-putdown location) ;; TODO re-enable
-                                (game-location->view-pos location view.layout))
+                                (game-location->view-pos location
+                                                         view.layout
+                                                         view.locations.cursor))
               pos {:row (+ row 1) :col (- col 2)}]
           (frame-buffer.write fbo :draw pos {:width 1 :height 1} #"▸")
           (frame-buffer.write fbo :color pos {:width 1 :height 1} #(highlight-group-for-component [:BUTTON 0])))))
 
     ;; draw cursor
-    (if view.draw-cursor
+    (if view.show.cursor
       (let [{: row : col} (->; (adjust-location-for-pickup-or-putdown game-state.cursor)
-                              (game-location->view-pos view.locations.cursor view.layout))
+                              (game-location->view-pos view.locations.cursor
+                                                       view.layout
+                                                       view.locations.cursor))
             pos {:row (+ row 1) :col (- col 2)}]
         (frame-buffer.write fbo :draw pos {:width 3 :height 1} #(match $2 1 "🯁" 2 "🯂" 3 "🯃"))
         (frame-buffer.write fbo :color pos {:width 3 :height 1} #:Normal)))
