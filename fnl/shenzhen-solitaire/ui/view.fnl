@@ -338,7 +338,7 @@
         (let [line (- row-n 1)
               new-offset (+ byte-offset (length (. fbo :draw row-n col-n)))
               col-start (- new-offset 1)
-              col-end (+ new-offset 2)
+              col-end (+ new-offset 0)
               hl-name (. fbo.color row-n col-n)]
           (if (not (= "" hl-name))
             (api.nvim_buf_add_highlight view.buf-id view.hl-ns hl-name line col-start col-end))
