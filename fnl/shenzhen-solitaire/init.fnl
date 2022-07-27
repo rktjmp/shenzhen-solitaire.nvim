@@ -54,7 +54,10 @@
             :next-location :<Tab>
             :prev-location :<S-Tab>}})
   (let [config (vim.tbl_deep_extend :force default-config (or ?config {}))
-        game-thread (runtime.start-new-game buf-id M.first-responder config ?seed)]
-    (assert (coroutine.resume game-thread :control :hello))))
+        thread (runtime.start-new-game buf-id M.first-responder config ?seed)]
+    (match (coroutine.resume thread :control :hello)
+      (true [:ok _]) nil
+      (true [:err e]) (error (.. e "\n" (debug.traceback thread)))
+      (false e) (error (.. e "\n" (debug.traceback thread))))))
 
 (values M)
