@@ -356,39 +356,42 @@
 ;                     [_ _ [:err e]] (error e)))
 ;     (values game)))
 
-; (fn m.save-game [game event]
-;   (let [save-file (join-path (vim.fn.stdpath :cache) :shenzhen-solitaire.save)]
-;     (with-open [fout (io.open save-file :w)]
-;       (fout:write (vim.mpack.encode game.logic-state.events))
-;       (vim.notify "Saved game"))))
+(fn m.save-game [game event]
+  (let [save-file (join-path (vim.fn.stdpath :cache) :shenzhen-solitaire.save)]
+    (with-open [fout (io.open save-file :w)]
+      (fout:write (vim.mpack.encode game.state.pure.events))
+      (vim.notify "Saved game"))
+    (values game)))
 
-; (fn m.load-game [game event]
-;   (let [save-file (join-path (vim.fn.stdpath :cache) :shenzhen-solitaire.save)
-;         readable (= 1 (vim.fn.filereadable save-file))]
-;     (if readable
-;       (with-open [fin (io.open (.. save-file))]
-;         (let [bytes (fin:read :*a)
-;               events (vim.mpack.decode bytes)
-;               new-logic-state (E.reduce events (logic.S.empty-state) #(logic.S.apply $1 $3))
-;               new-game-state (m.update-game-state-with-logic-state {:wins game.game-state.wins}
-;                                                                    new-logic-state)]
-;           (tset game :logic-state new-logic-state)
-;           (tset game :game-state new-game-state)))
-;       (error "Could not open save file, probably doesn't exist"))))
+(fn m.load-game [game event]
+  (let [save-file (join-path (vim.fn.stdpath :cache) :shenzhen-solitaire.save)
+        readable (= 1 (vim.fn.filereadable save-file))]
+    (if readable
+      (with-open [fin (io.open (.. save-file))]
+        (let [bytes (fin:read :*a)
+              events (vim.mpack.decode bytes)
+              pure (E.reduce events (logic.S.empty-state) #(logic.S.apply $1 $3))
+              dirty (m.pure-state->dirty-state pure)]
+          (doto game.state
+            (tset :pure pure)
+            (tset :dirty dirty))))
+      (error "Could not open save file, probably doesn't exist"))
+    (values game)))
 
-; (fn m.restart-game [game event]
-;   ;; roll back to first move
-;   (let [{: events} game.logic-state
-;         events (accumulate [(initial-events stop?) (values [] false)
-;                             _ event (ipairs events) :until stop?]
-;                  (match event
-;                    [:moved-cards] (values initial-events true)
-;                    _ (values (E.append$ initial-events event) false)))
-;         new-logic-state (E.reduce events (logic.S.empty-state) #(logic.S.apply $1 $3))
-;         new-game-state (m.update-game-state-with-logic-state {:wins game.game-state.wins}
-;                                                              new-logic-state)]
-;        (tset game :logic-state new-logic-state)
-;        (tset game :game-state new-game-state)))
+(fn m.restart-game [game event]
+  (let [{: events} game.state.pure
+        events (accumulate [(initial-events stop?) (values [] false)
+                            _ event (ipairs events) :until stop?]
+                 (match event
+                   ;; TODO potential bug here if new events are added to system
+                   [:moved-cards] (values initial-events true)
+                   _ (values (E.append$ initial-events event) false)))
+        pure (E.reduce events (logic.S.empty-state) #(logic.S.apply $1 $3))
+        dirty (m.pure-state->dirty-state pure)]
+    (doto game.state
+      (tset :pure pure)
+      (tset :dirty dirty))
+    (values game)))
 
 ; (fn m.undo-last-move [game event]
 ;   (if game.config.difficulty.allow-undo
