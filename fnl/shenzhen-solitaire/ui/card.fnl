@@ -44,6 +44,7 @@
     (tset bitmap 2 2 (or symbol (tostring val) "x"))
     {:size data.size
      :pos data.pos
+     :location data.location
      : bitmap
      :highlight data.highlight}))
 

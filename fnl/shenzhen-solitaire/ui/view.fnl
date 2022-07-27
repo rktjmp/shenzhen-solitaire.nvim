@@ -94,6 +94,7 @@
         pos (game-location->view-pos location view)
         hl (highlight-group-for-component game-card)
         data {:pos pos
+              :location location
               :size layout.card.size
               :borders layout.card.borders
               :highlight hl}]
@@ -118,6 +119,7 @@
               ;; for the current cursor. The first update call should correct any of
               ;; this, though we may get animation quirks.
               :locations {:cursor [:tableau 1 5]} ;; TBD in first update call
+              :holding? false
               :meta {}
               :layout {:size {:width 80 :height 40}
                        :info config.info
@@ -191,7 +193,6 @@
                           col (byte-offset->col row byte-offset)]
                       ;; map col row to location, this may fail as click can be
                       ;; outside the buffer when switching.
-                      (inspect! (?. view :fbo :hit row col))
                       (if (= winid view.winid)
                         ;; clicked in same win, send event
                         (match (?. view :fbo :hit row col)
@@ -206,21 +207,29 @@
     (values view)))
 
 (fn M.update [view {: state : locations : meta}]
-  ;; run through all cards and update their positions
-  (let [update-card (fn [game-card location]
-                      (let [ui-card (. view.cards game-card)]
-                        (tset ui-card :pos (game-location->view-pos location view))))]
-    ;; just copy meta data over directly I guess
-    (tset view :meta {:wins meta.wins
-                      :won? meta.won?
-                      ;; TODO: strip first setup events, but should be real count
-                      :moves (- (length state.events) 3)})
-    (tset view :locations locations)
-    (map-game-state-cards state update-card))
+  ;; refresh ui cards to match state
+  (var z 0)
+  (map-game-state-cards state
+                        (fn [card location]
+                          (let [pos (game-location->view-pos location view)
+                                ui-card (. view :cards card)]
+                            (set z (+ z 1))
+                            (doto ui-card
+                              (tset :highlight (highlight-group-for-component card))
+                              (tset :z-index z)
+                              (tset :pos pos)
+                              (tset :location location)))))
+
+  ;; just copy meta data over directly I guess
+  (tset view :meta {:wins meta.wins
+                    :won? meta.won?
+                    ;; TODO: strip first setup events, but should be real count
+                    :moves (- (length state.events) 3)})
+  (tset view :holding? (match state.hand [nil] false [cards] true))
+  (tset view :locations locations)
   (values view))
 
-
-(fn M.draw [view state]
+(fn M.draw [view]
   "Render out a games state."
   ;; For now we do this super inefficently, because in the end it probably doesn't matter.
   ;; Potential improvements:
@@ -246,17 +255,17 @@
   (fn adjust-location-for-pickup-or-putdown [location]
     ;; valid pickup locations are "on card", valid put down locations are "post
     ;; card", so the cursor and markers need adjusting up a step
-    (match state.hand
-      [nil] location
-      [cards] (let [[slot col-n card-n] location]
-                [slot col-n (math.max 1 (- card-n 1))])))
+    (if view.holding?
+      (let [[slot col-n card-n] location]
+        [slot col-n (math.max 1 (- card-n 1))])
+      location))
 
   (let [fbo (frame-buffer.new view.size)
         _ (set view.fbo fbo)]
     ;; render out card slot placeholders
     (E.each view.placeholders
-            #(let [[card location] $2]
-               (draw-card fbo card location)))
+            #(let [[card _] $2] ;; TODO slim out location
+               (draw-card fbo card card.location)))
 
     ;; update our ui-card positions to reflect where they are in the game state
     ;; render cards out according to the tableau, so that's left to right top to
@@ -267,12 +276,9 @@
           info (icollect [c (string.gmatch info-string ".")] c)]
       (frame-buffer.write fbo :draw view.layout.info.pos {:height 1 :width (length info)} #(. info $2)))
 
-    (map-game-state-cards state
-      (fn [card location]
-        (let [pos (game-location->view-pos location view)]
-          (tset view :cards card :highlight (highlight-group-for-component card))
-          (tset view :cards card :pos pos))
-        (draw-card fbo (. view :cards card) location)))
+    (-> (E.map view.cards #$2)
+        (E.sort$ #(< $1.z-index $2.z-index))
+        (E.map #(draw-card fbo $2 $2.location)))
 
     ;; draw lock buttons
     (let [{: row : col} view.layout.buttons.pos
