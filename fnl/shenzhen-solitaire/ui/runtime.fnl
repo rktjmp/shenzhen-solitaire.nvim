@@ -62,72 +62,6 @@
       (E.filter #(. $2 1))
       (E.map #(match $2 [_ loc] loc))))
 
-; (fn m.generate-valid-locations [game-state]
-;   "Given a game state, find all board locations that the user may interact with.
-;   This is dictated by some game-state such as whether cards are in-hand or not
-;   and includes buttons."
-;   (fn all-possible-pickup-locations [game-state]
-;     ;; for pickup we want to check every card on the table
-;     (let [fm E.flat-map
-;           map E.map]
-;       (fm [:tableau :cell :foundation]
-;           (fn [_ slot]
-;             (fm (. game-state slot)
-;                 (fn [col-n col]
-;                   (map col (fn [card-n]
-;                              [slot col-n card-n]))))))))
-;   (fn all-possible-putdown-locations [game-state]
-;     ;; for put down we need to check the card positions *after* the last card
-;     ;; in every slotxcol, as well as any 1 1 of empty columns.
-;     (let [head-or-tail (fn [slot col-n]
-;                          (match (. game-state slot col-n)
-;                            (where col (<= 1 (length col))) [slot col-n (+ 1 (length col))]
-;                            (where col (= 0 (length col))) [slot col-n 1]))]
-;       (-> []
-;           (E.concat$ (E.map #(iter/range 1 8) #(head-or-tail :tableau $1)))
-;           (E.concat$ (E.map #(iter/range 1 4) #(head-or-tail :foundation $1)))
-;           (E.concat$ (E.map #(iter/range 1 3) #(head-or-tail :cell $1))))))
-
-;   (let [{: hand : hand-from} game-state
-;         holding? (match hand [nil] false [cards] true)
-;         checked-locations (match hand
-;                             [nil] (E.map (all-possible-pickup-locations game-state)
-;                                          #[(logic.collect-from-ok? game-state $2) $2])
-;                             [cards] (E.map (all-possible-putdown-locations game-state)
-;                                            #[(logic.can-place-ok? game-state $2 cards) $2]))
-;         ;; we also want to insert the place we picked up our cards from, so we
-;         ;; can return to that location and put the cards back. This might not
-;         ;; always be a valid location unless we picked up mid-sequence or from
-;         ;; the head of a slot, which is why we manually insert it, but also
-;         ;; don't want to insert it if it already exists (if we picked up mid seq).
-;         ugly (match hand-from
-;                [h-slot h-col h-card]
-;                #(if (accumulate [f true _ [_ [slot col card]] (ipairs $1) :until (not f)]
-;                         (match [h-slot h-col h-card] [slot col card] false _ true))
-;                   ;; did not find hand in given positions, so add it
-;                   (E.append$ $1 [[:ok true] hand-from])
-;                   ;; did find hand, dont need to add
-;                   (values $1))
-;                ;; empty hand, pass value on as is
-;                _ #$1)
-;         locations (-> checked-locations
-;                       (E.filter #(match $2 [[:ok] location] true))
-;                       (ugly)
-;                       (E.map #(match $2 [_ location] location))
-;                       (E.sort$ (fn [[slot-1 col-1 card-1] [slot-2 col-2 card-2]]
-;                                  (let [slot-val {:tableau 1000 :cell 2000 :foundation 3000}
-;                                        a [(. slot-val slot-1) col-1 card-1]
-;                                        b [(. slot-val slot-2) col-2 card-2]]
-;                                    (match [a b]
-;                                      [[s c x] [s c y]] (< x y)
-;                                      [[s x _] [s y _]] (< x y)
-;                                      [[x _ _] [y _ _]] (< x y)))))
-;                       ;; TODO Questionable decision to smush buttons here as "positions"
-;                       (E.concat$ (-> (if (not holding?) [:DRAGON-RED :DRAGON-GREEN :DRAGON-WHITE] [])
-;                                      (E.map #(if (. game-state :lockable-dragons (.. $2 :?))
-;                                                [:LOCK-DRAGON 1 $1])))))]
-;     (values locations)))
-
 (fn m.update [game]
   (if game.config.difficulty.auto-move-obvious
     ;; make every auto-move we can in one go for mow
@@ -159,6 +93,9 @@
         (tset :card [])
         (tset :buttons [])))) ;; TODO new-game button
 
+  ;; needed for consistent next-location interaction
+  (set game.locations.flattened (m.locations->nextable-locations game.locations))
+
   (let []
     ;; TODO sort & ins-filter hand-from
     (ui-view.update game.view {:state game.state.dirty
@@ -171,31 +108,31 @@
     (ui-view.draw view dirty))
   nil)
 
-; (fn shift-location [game event direction]
-;   ;; see if cursor is curently on valid location, if so, go to next (or loop)
-;   ;; if not, go to first.
-;   (let [{:game-state {: cursor : valid-locations}} game
-;         [cursor-slot cursor-col-n cursor-card-n] cursor
-;         current-index (accumulate [f nil i location (ipairs valid-locations) :until f]
-;                         (match location [cursor-slot cursor-col-n cursor-card-n] i))
-;         len-locations (length valid-locations)
-;         next-index (match [direction current-index]
-;                      [:next nil] 1
-;                      (where [:next i] (= i len-locations)) 1
-;                      [:next i] (+ i 1)
-;                      [:prev nil] len-locations
-;                      (where [:prev i] (= i 1)) len-locations
-;                      [:prev i] (- i 1))
-;         next-location (match valid-locations
-;                         [nil] cursor
-;                         list (. valid-locations next-index))]
-;     (tset game :game-state :cursor next-location)
-;     (values game)))
+(fn shift-location [game event direction]
+  ;; see if cursor is curently on valid location, if so, go to next (or loop)
+  ;; if not, go to first.
+  (let [{:locations {: cursor :flattened locations}} game
+        [cursor-slot cursor-col-n cursor-card-n] cursor
+        current-index (accumulate [f nil i location (ipairs locations) :until f]
+                        (match location [cursor-slot cursor-col-n cursor-card-n] i))
+        len-locations (length locations)
+        next-index (match [direction current-index]
+                     [:next nil] 1
+                     (where [:next i] (= i len-locations)) 1
+                     [:next i] (+ i 1)
+                     [:prev nil] len-locations
+                     (where [:prev i] (= i 1)) len-locations
+                     [:prev i] (- i 1))
+        new-location (match locations
+                       [nil] cursor
+                       list (. locations next-index))]
+    (tset game :locations :cursor new-location)
+    (values game)))
 
-; (fn m.next-location [game event]
-;   (shift-location game event :next))
-; (fn m.prev-location [game event]
-;   (shift-location game event :prev))
+(fn m.next-location [game event]
+  (shift-location game event :next))
+(fn m.prev-location [game event]
+  (shift-location game event :prev))
 
 ; (fn m.left-mouse [game event]
 ;   ;; When we write out to the hit buffer, we currently don't do any special
@@ -394,6 +331,31 @@
   (doto (logic.S.clone-state logic-state)
     ;; hand acts as another slot, so it is empty or has cards in it
     (tset :hand [])))
+
+(fn m.locations->nextable-locations [locations]
+  "Given the map of all location data, parse the useful ones and sort into a
+  flat list so we can tab through the locations in a consistent order"
+  (let [;; we know these are good locations, cards and buttons
+        flat (E.concat$ [] locations.cards locations.buttons)
+        ;; we also want to insert the hand-from location as a valid tabbable
+        ;; but only if it's not already in the list which may occur if we
+        ;; picked up mid sequence.
+        flat (match locations.hand-from
+               ;; no hand from, so nothing done
+               nil flat
+               ;; have hand, so check if it's in the list and insert or not
+               [h-slot h-col h-card]
+               (if (E.reduce locations.cards true #(match $3 [h-slot h-col h-card] false _ $1))
+                 (E.append$ flat locations.hand-from)
+                 (values flat)))]
+    (E.sort$ flat (fn [[slot-1 col-1 card-1] [slot-2 col-2 card-2]]
+                    (let [slot-val {:tableau 1000 :cell 2000 :foundation 3000 :BUTTON 10000}
+                          a [(. slot-val slot-1) col-1 card-1]
+                          b [(. slot-val slot-2) col-2 card-2]]
+                      (match [a b]
+                        [[s c x] [s c y]] (< x y)
+                        [[s x _] [s y _]] (< x y)
+                        [[x _ _] [y _ _]] (< x y)))))))
 
 (fn M.start-new-game [buf-id first-responder config ?seed]
   "Generate a fresh game and return a coroutine which will handle events when resumed"
