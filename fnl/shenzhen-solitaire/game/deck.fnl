@@ -5,20 +5,23 @@
 
 (import-macros {: use} :shenzhen-solitaire.lib.donut.use)
 
-(use enum :shenzhen-solitaire.lib.donut.enum
+(use E :shenzhen-solitaire.lib.donut.enum
      {: range} :shenzhen-solitaire.lib.donut.iter :ns iter)
 
 (local M {})
 
+(local D
+  (-> [(E.flat-map [:STRING :COIN :MYRIAD]
+                   (fn [_ s] (E.map #(iter/range 1 9) #[s $1])))
+      [[:FLOWER 0]]
+      (E.flat-map [:DRAGON-RED :DRAGON-GREEN :DRAGON-WHITE]
+                  (fn [_ s] (E.map #(iter/range 1 4) #[s 0])))]
+      (E.flatten)))
+
 ;; the deck contents is hard coded
 (fn M.new []
-  "Generate a new deck of cards"
-  (let [suits (enum.flat-map [:STRING :COIN :MYRIAD]
-                             (fn [_ s] (enum.map #(iter/range 1 9) #[s $1])))
-        flower [[:FLOWER 0]]
-        specials (enum.flat-map [:DRAGON-RED :DRAGON-GREEN :DRAGON-WHITE]
-                                (fn [_ s] (enum.map #(iter/range 1 4) #[s 0])))]
-    (enum.concat$ suits specials flower)))
+ "Generate a new deck of cards"
+  D)
 
 (fn M.special-card? [card]
   "Is given card one of the special cards?"
@@ -83,13 +86,13 @@
   "Does the given stack alternate in suit and decrement in value?"
   ;; check run would be valid
   (fn alternating-suit-and-dec-value? [[head & tail]]
-    (not (= nil (enum.reduce tail
+    (not (= nil (E.reduce tail
                              head
                              #(match [$1 $3]
                                 (where [[ls lv] [s v]] (and (not (= ls s)) (= v (- lv 1)))) $3)))))
   (fn contains-no-specials? [run]
-    (-> (enum.filter run #(M.special-card? $2))
-        (enum.empty?)))
+    (-> (E.filter run #(M.special-card? $2))
+        (E.empty?)))
   (and (alternating-suit-and-dec-value? stack)
        (contains-no-specials? stack)))
 
