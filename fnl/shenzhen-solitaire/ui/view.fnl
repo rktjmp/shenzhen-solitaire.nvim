@@ -64,7 +64,6 @@
                                                                                             (+ card-n))]
                                                                         view)]
                              {:row row :col (+ col 1)})
-      ;; UGLY HACK TODO
       ;; we use this to work out where to put the cursor, but the adjustments here are
       ;; to shift the cursor up rows to align with the buttons which are drawn differently.
       [:BUTTON _ button] (let [{: row : col} layout.buttons.pos]
@@ -153,9 +152,11 @@
                                             :noremap false
                                             :nowait true
                                             :desc $2})]
-      ;; TODO set no-mod, etc
       (let [buf-opts {:filetype :shenzhen-solitaire}
-            win-opts {:cursorline false :number false :list false :relativenumber false}]
+            win-opts {:cursorline false
+                      :number false
+                      :list false
+                      :relativenumber false}]
         (enum/map buf-opts #(api.nvim_buf_set_option buf-id $1 $2))
         (api.nvim_buf_call buf-id
                            #(let [win-id (api.nvim_get_current_win)]
@@ -225,7 +226,6 @@
   ;; Potential improvements:
   ;; Apply highlights by consecutive run instead of per-position
   ;; Track "damage" diff against last fb and only re-write where we need to
-  ;; TODO remove cursor from view, it's derived from the cursor position in the game state
   (fn draw-card [fbo card location]
     (let [{: pos : size : bitmap : highlight} card
           edge-hl :Normal
@@ -314,16 +314,16 @@
     ;; draw "can move here" markers
     (if view.show.valid-locations
       (each [i location (ipairs view.locations.cards)]
-        (let [{: row : col} (-> ;(adjust-location-for-pickup-or-putdown location) ;; TODO re-enable
-                                (game-location->view-pos location view))
+        (let [{: row : col} (-> (adjust-location-for-pickup-or-putdown location)
+                                (game-location->view-pos view))
               pos {:row (+ row 1) :col (- col 2)}]
           (frame-buffer.write fbo :draw pos {:width 1 :height 1} #"▸")
           (frame-buffer.write fbo :color pos {:width 1 :height 1} #(highlight-group-for-component [:BUTTON 0])))))
 
     ;; draw cursor
     (if view.show.cursor
-      (let [{: row : col} (->; (adjust-location-for-pickup-or-putdown game-state.cursor)
-                              (game-location->view-pos view.locations.cursor view))
+      (let [{: row : col} (-> (adjust-location-for-pickup-or-putdown view.locations.cursor)
+                              (game-location->view-pos view))
             pos {:row (+ row 1) :col (- col 2)}]
         (frame-buffer.write fbo :draw pos {:width 3 :height 1} #(match $2 1 "🯁" 2 "🯂" 3 "🯃"))
         (frame-buffer.write fbo :color pos {:width 3 :height 1} #:Normal)))
