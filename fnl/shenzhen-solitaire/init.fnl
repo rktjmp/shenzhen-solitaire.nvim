@@ -39,17 +39,17 @@
                  :dragon-red {:fg :#d34d4d :bg hl-normal-background}}
      :info {:pos {:row 22 :col 3}}
      :size {:width 80 :height 40}
-     :cursor {:show true} ;; show cursor, strongly recommended without a mouse
-     :difficulty {:show-valid-locations true ;; show possible interactive locations, useful without a mouse.
+     :cursor {:show false} ;; show cursor, strongly recommended without a mouse
+     :difficulty {:show-valid-locations false ;; show possible interactive locations, useful without a mouse.
                   :allow-undo false
                   :auto-move-obvious true}
      :keys {:left-mouse :<LeftMouse>
             :right-mouse :<RightMouse>
             :interact :y
             :auto-move :a
-            :save-game :szw
-            :load-game :szl
-            :restart-game :szr
+            :save-game :ww
+            :load-game :ll
+            :restart-game :rr
             :undo-last-move :u
             :next-location :<Tab>
             :prev-location :<S-Tab>}})
