@@ -20,6 +20,8 @@
   (accumulate [t head _ part (ipairs [...])]
     (.. t path-separator part)))
 (local win-count-path (join-path (vim.fn.stdpath :cache) :shenzhen-solitaire.wins))
+;; warn: path dupd into init.fnl
+(local gauntlet-path (join-path (vim.fn.stdpath :cache) :shenzhen-solitaire.gauntlet))
 
 (local M {})
 (local m {})
@@ -36,6 +38,7 @@
           pure (logic.start-new-game ?seed)
           dirty (m.pure-state->dirty-state pure)
           meta {:won? false
+                :gauntlet config.gauntlet
                 :wins win-count}
           view (ui-view.new {: buf-id
                              : responder
@@ -46,14 +49,12 @@
         (tset :view view)
         (tset :config config)
         (tset :state {: pure : dirty})
-        (tset :meta {:won? false
-                     :wins win-count})
+        (tset :meta meta)
         (tset :locations {:cursor [:tableau 1 5] ;; TODO actually infer a "best start" this from data
                           :hand-from nil
                           :cards (m.find-interactable-cards dirty)
                           :buttons (m.find-interactable-buttons pure)})
-        (m.update)
-        (m.draw)))
+        (m.update)))
 
     (fn loop [...]
       ;; we dont want errors in the game code to totally kill the game coroutine
@@ -75,13 +76,17 @@
                        [:ok :goodbye] #(vim.notify :Goodbye!)
                        [:ok] (do
                                (m.update game)
-                               (m.draw game)
                                (values loop))
                        [:err e] (values loop))]
         (and-then (coroutine.yield result))))
     ;; start the loop which will do noting and yield
     (loop :control :hello))
   (coroutine.create setup))
+
+(fn m.save-gauntlet [seed]
+  (let [seed (+ seed 1)]
+    (with-open [fout (io.open gauntlet-path :w)]
+      (fout:write (fmt "return %d" seed)))))
 
 ;;;
 ;;; Life Cycle
@@ -121,32 +126,31 @@
       ;; won
       (do
         (when (not game.meta.won?)
+          ;; only trip this once
           (let [readable? (= 1 (vim.fn.filereadable win-count-path))
                 win-count (if readable? (+ (dofile win-count-path) 1) 1)]
             (with-open [fout (io.open win-count-path :w)]
               (fout:write (fmt "return %d" win-count)))
             (doto game.meta
               (tset :won? true)
-              (tset :wins win-count))))
+              (tset :wins win-count))
+            (if game.meta.gauntlet
+              (m.save-gauntlet game.meta.gauntlet)))
         ;; dont allow interactions if we're finished, except the new game button
         (doto game.locations
           (tset :hand-from nil)
           (tset :card [])
           (tset :buttons [])
           (tset :flattened []))))) ;; TODO new-game button
-
-  ;; TODO some bugs here probably as the view only redraws if something
-  ;; animates
-  (ui-view.update game.view {:state game.state.dirty
-                             :locations game.locations
-                             :meta game.meta})
-  ;; force draw after a win
-  (if game.meta.won?
-    (ui-view.draw game.view))
-  (values game))
-
-(fn m.draw [game]
-  nil)
+    ;; TODO some bugs here probably as the view only redraws if something
+    ;; animates
+    (ui-view.update game.view {:state game.state.dirty
+                               :locations game.locations
+                               :meta game.meta})
+    ;; force draw after a win
+    (if game.meta.won?
+      (ui-view.draw game.view))
+    (values game)))
 
 (fn m.find-interactable-cards [state]
   "Find any locations we can pick up or put down, if we have cards in hand."
@@ -320,43 +324,46 @@
   (let [{: pure : dirty} game.state
         {: cursor : hand-from} game.locations]
     (match [dirty.hand cursor]
-      [_ [:BUTTON 1 button]] (let [which (match button 1 :DRAGON-RED 2 :DRAGON-GREEN 3 :DRAGON-WHITE)]
-                               (match (logic.lock-dragons-ok? pure which)
-                                 [:ok {: to}]
-                                 (let [pure (logic.lock-dragons pure which)
-                                       dirty (m.pure-state->dirty-state pure)]
-                                   ; (tset new-game-state :cursor to)
-                                   (doto game.state
-                                     (tset :pure pure)
-                                     (tset :dirty dirty)))
-                                 [:err e] (error e)))
+      [_ [:BUTTON 1 button]]
+      (let [which (match button 1 :DRAGON-RED 2 :DRAGON-GREEN 3 :DRAGON-WHITE)]
+        (match (logic.lock-dragons-ok? pure which)
+          [:ok {: to}]
+          (let [pure (logic.lock-dragons pure which)
+                dirty (m.pure-state->dirty-state pure)]
+            ; (tset new-game-state :cursor to)
+            (doto game.state
+              (tset :pure pure)
+              (tset :dirty dirty)))
+          [:err e] (error e)))
       ;; pick up is checked against logic state as we have had no effect yet
-      [[nil] _] (match (logic.collect-from-ok? pure cursor)
-                  [:ok] (let [[slot col-n card-n] cursor
-                              (rem hand) (E.split (. pure slot col-n) card-n)]
-                          (tset dirty slot col-n rem)
-                          (tset dirty :hand [hand])
-                          (tset game.locations :hand-from cursor))
-                  [:err e] (error e))
+      [[nil] _]
+      (match (logic.collect-from-ok? pure cursor)
+        [:ok] (let [[slot col-n card-n] cursor
+                    (rem hand) (E.split (. pure slot col-n) card-n)]
+                (tset dirty slot col-n rem)
+                (tset dirty :hand [hand])
+                (tset game.locations :hand-from cursor))
+        [:err e] (error e))
       ;; place is checked against game state as we have technically altered it
       ;; kinda ugly hack so we can place back where we picked up even if it
       ;; makes an invalid sequence
-      [[cards] _] (match [cursor hand-from (logic.can-place-ok? dirty cursor cards)]
-                  ;; trying to put down where we picked up, don't do any checks, just revert the state
-                  [[s cl cd] [s cl cd] _]
-                  (let [dirty (m.pure-state->dirty-state pure)]
-                    (set game.state.dirty dirty))
-                  ;; otherwise can we move?
-                  [_ _ [:ok]]
-                  (let [pure (logic.move-cards pure hand-from cursor)
-                        dirty (m.pure-state->dirty-state pure)]
-                    (doto game.locations
-                      (tset :hand-from nil))
-                    (doto game.state
-                      (tset :pure pure)
-                      (tset :dirty dirty)))
-                  ;; hard error here, ui shouldn't request bad things
-                  [_ _ [:err e]] (error e)))
+      [[cards] _]
+      (match [cursor hand-from (logic.can-place-ok? dirty cursor cards)]
+        ;; trying to put down where we picked up, don't do any checks, just revert the state
+        [[s cl cd] [s cl cd] _]
+        (let [dirty (m.pure-state->dirty-state pure)]
+          (set game.state.dirty dirty))
+        ;; otherwise can we move?
+        [_ _ [:ok]]
+        (let [pure (logic.move-cards pure hand-from cursor)
+              dirty (m.pure-state->dirty-state pure)]
+          (doto game.locations
+            (tset :hand-from nil))
+          (doto game.state
+            (tset :pure pure)
+            (tset :dirty dirty)))
+        ;; hard error here, ui shouldn't request bad things
+        [_ _ [:err e]] (error e)))
     (values game)))
 
 (fn m.save-game [game event]

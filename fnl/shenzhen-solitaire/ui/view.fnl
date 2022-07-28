@@ -256,6 +256,7 @@
   ;; just copy meta data over directly I guess
   (tset view :meta {:wins meta.wins
                     :won? meta.won?
+                    :gauntlet meta.gauntlet
                     ;; TODO: strip first setup events, but should be real count
                     :moves (- (length state.events) 3)})
   (tset view :holding? (match state.hand [nil] false [cards] true))
@@ -333,7 +334,10 @@
     ;; bottom, this gives us the correct z-indexing
 
     ;; draw info, this is lower than the cards so stacks can over-write it
-    (let [info-string (fmt "wins: %d moves: %d" view.meta.wins view.meta.moves)
+    (let [info-string (fmt "%swins: %d moves: %d"
+                           (if view.meta.gauntlet (fmt "level: %d " view.meta.gauntlet) "")
+                           view.meta.wins
+                           view.meta.moves)
           info (icollect [c (string.gmatch info-string ".")] c)]
       (frame-buffer.write fbo :draw view.layout.info.pos {:height 1 :width (length info)} #(. info $2)))
 

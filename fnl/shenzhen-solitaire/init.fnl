@@ -3,6 +3,17 @@
 (use runtime :shenzhen-solitaire.ui.runtime
      {:format fmt} string)
 
+
+(local path-separator (string.match package.config "(.-)\n"))
+(lambda join-path [head ...]
+  (accumulate [t head _ part (ipairs [...])]
+    (.. t path-separator part)))
+(local gauntlet-path (join-path (vim.fn.stdpath :cache) :shenzhen-solitaire.gauntlet))
+(fn read-gauntlet []
+  (let [readable? (= 1 (vim.fn.filereadable gauntlet-path))
+        seed (if readable? (dofile gauntlet-path) 1)]
+    (values seed)))
+
 (local M {})
 
 (fn M.first-responder [thread event]
@@ -10,6 +21,12 @@
     (true [:ok _]) nil
     (true [:err e]) (error (.. e (debug.traceback thread)))
     (false e) (error (.. e (debug.traceback thread)))))
+
+(fn M.start-next-game [buf-id ?config]
+  (let [seed (read-gauntlet)
+        config (or ?config {})]
+    (tset config :gauntlet seed)
+    (M.start-new-game buf-id config seed)))
 
 (fn M.start-new-game [buf-id ?config ?seed]
   ;; set default inside call so we pickup on colorscheme changes between new games
@@ -43,6 +60,7 @@
      :difficulty {:show-valid-locations false ;; show possible interactive locations, useful without a mouse.
                   :allow-undo false
                   :auto-move-obvious true}
+     :gauntlet false
      :keys {:left-mouse :<LeftMouse>
             :right-mouse :<RightMouse>
             :interact :y
