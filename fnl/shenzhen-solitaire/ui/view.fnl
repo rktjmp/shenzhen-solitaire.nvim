@@ -236,7 +236,7 @@
                           (math.sqrt))
                 ms-per-dist 5
                 time-to-animate (math.min (* ms-per-dist dist) 200)
-                started-at (+ (vim.loop.now) (* stagger 5))]
+                started-at (+ (vim.loop.now) (* stagger 25))]
             (set stagger (+ stagger 1))
             (doto ui-card
               (tset :z-index (+ 100 z))
@@ -247,7 +247,7 @@
               (tset :pos ui-card.pos)))
           (doto ui-card
             (tset :z-index z)
-            (tset :animating {})
+            (tset :animating nil)
             (tset :pos pos)))
         (doto ui-card
           (tset :highlight (highlight-group-for-component card))
@@ -263,29 +263,31 @@
   (vim.defer_fn #(M.tick view) FRAME-INTERVAL)
   (values view))
 
-(fn M.tick [view]
+(fn M.tick [view last-time]
   (var redraw false)
   (fn lerp [a b t]
     (math.ceil (+ a (* (- b a) t))))
   (E.map view.cards
          (fn [_ card]
-           (match card.animating
+           (match (?. card :animating)
              (where {:from a :to b : time-to-animate : started-at} (<= started-at (vim.loop.now)))
              (let [rem (- (vim.loop.now) started-at)
                    t (math.min 1.0 (/ rem time-to-animate))
                    pos {:row (lerp a.row b.row t)
                         :col (lerp a.col b.col t)}]
-               (inspect! rem t)
                (set redraw true)
                ;; TODO max these vals
                (tset card :pos pos)
                (when (<= 1 t)
                  (tset card :pos b)
                  (tset card :z-index (- card.z-index 100))
-                 (tset card :animating {}))))))
+                 (tset card :animating nil))))))
   (M.draw view)
-  (if redraw
-    (vim.defer_fn #(M.tick view) FRAME-INTERVAL))
+  ;; since we draw the un-animated cards, cursor, then the animated cards, we
+  ;; need to force a redraw after the last animation is pushed through which
+  ;; should just draw the cards, then the cursor.
+  (if (or redraw last-time)
+    (vim.defer_fn #(M.tick view redraw) FRAME-INTERVAL))
   (values view))
 
 (fn M.draw [view]
@@ -381,6 +383,12 @@
           (frame-buffer.write fbo :draw pos {:width 1 :height 1} #"▸")
           (frame-buffer.write fbo :color pos {:width 1 :height 1} #(highlight-group-for-component [:BUTTON 0])))))
 
+    ;; draw non animating cards
+    (-> (E.map view.cards #$2)
+        (E.filter #(match $2 {: animating} false _ true))
+        (E.sort$ #(< $1.z-index $2.z-index))
+        (E.map #(draw-card fbo $2 $2.location)))
+
     ;; draw cursor
     (if view.show.cursor
       (let [{: row : col} (-> (adjust-location-for-pickup-or-putdown view.locations.cursor)
@@ -389,8 +397,11 @@
         (frame-buffer.write fbo :draw pos {:width 3 :height 1} #(match $2 1 "🯁" 2 "🯂" 3 "🯃"))
         (frame-buffer.write fbo :color pos {:width 3 :height 1} #:Normal)))
 
-    ;; draw cards last, so they animate over the top of all other elements
+    ;; draw animating cards on top
+    ;; this doesn't quite work because of how draw is only called as needed,
+    ;; eg. post-tick-with-animate
     (-> (E.map view.cards #$2)
+        (E.filter #(match $2 {: animating} true _ false))
         (E.sort$ #(< $1.z-index $2.z-index))
         (E.map #(draw-card fbo $2 $2.location)))
 
