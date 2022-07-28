@@ -119,13 +119,15 @@
         (tset :cursor cursor-location)
         (tset :flattened flattened))
       ;; won
-      (let [readable? (= 1 (vim.fn.filereadable win-count-path))
-            win-count (if readable? (+ (dofile win-count-path) 1) 1)]
-        (with-open [fout (io.open win-count-path :w)]
-          (fout:write (fmt "return %d" win-count)))
-        (doto game.meta
-          (tset :won? true)
-          (tset :wins win-count))
+      (do
+        (when (not game.meta.won?)
+          (let [readable? (= 1 (vim.fn.filereadable win-count-path))
+                win-count (if readable? (+ (dofile win-count-path) 1) 1)]
+            (with-open [fout (io.open win-count-path :w)]
+              (fout:write (fmt "return %d" win-count)))
+            (doto game.meta
+              (tset :won? true)
+              (tset :wins win-count))))
         ;; dont allow interactions if we're finished, except the new game button
         (doto game.locations
           (tset :hand-from nil)
@@ -133,9 +135,14 @@
           (tset :buttons [])
           (tset :flattened []))))) ;; TODO new-game button
 
+  ;; TODO some bugs here probably as the view only redraws if something
+  ;; animates
   (ui-view.update game.view {:state game.state.dirty
                              :locations game.locations
                              :meta game.meta})
+  ;; force draw after a win
+  (if game.meta.won?
+    (ui-view.draw game.view))
   (values game))
 
 (fn m.draw [game]
@@ -360,6 +367,7 @@
     (values game)))
 
 (fn m.load-game [game event]
+  ;; TODO this has bugs around loading a game after winning but zzz
   (let [save-file (join-path (vim.fn.stdpath :cache) :shenzhen-solitaire.save)
         readable (= 1 (vim.fn.filereadable save-file))]
     (if readable
