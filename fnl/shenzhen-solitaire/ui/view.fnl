@@ -15,6 +15,7 @@
 
 (local api vim.api)
 (local M {})
+(local FRAME-INTERVAL (* 1000 (/ 1 60)))
 
 (fn highlight-group-for-component [card]
   (let [[kind _] card]
@@ -74,7 +75,7 @@
 
       _ (error (.. :unknown-location (vim.inspect location))))))
 
-(fn map-game-state-cards [state f]
+(fn map-state-cards [state f]
   "map f over all cards in state"
   (E.flat-map [:cell :foundation :tableau :hand]
               (fn [_ slot]
@@ -128,7 +129,7 @@
                        :cell config.cell
                        :buttons config.buttons
                        :card config.card}}]
-    (tset view :cards (-> (map-game-state-cards state #(game-card->ui-card $1 $2 view))
+    (tset view :cards (-> (map-state-cards state #(game-card->ui-card $1 $2 view))
                           (enum/pairs->table)))
     (tset view :placeholders (-> [(enum/map #(iter/range 1 8) #[:tableau $1 1])
                                   (enum/map #(iter/range 1 3) #[:cell $1 1])
@@ -206,19 +207,51 @@
 
     (values view)))
 
+(fn location-equal [loc-1 loc-2]
+  (match [loc-1 loc-2]
+    [[a b c] [a b c]] true
+    _ false))
+
 (fn M.update [view {: state : locations : meta}]
   ;; refresh ui cards to match state
+  ;; we want to render in-order but the ui-cards are unordered, attach the order seen
+  ;; to the card as a z-index.
   (var z 0)
-  (map-game-state-cards state
-                        (fn [card location]
-                          (let [pos (game-location->view-pos location view)
-                                ui-card (. view :cards card)]
-                            (set z (+ z 1))
-                            (doto ui-card
-                              (tset :highlight (highlight-group-for-component card))
-                              (tset :z-index z)
-                              (tset :pos pos)
-                              (tset :location location)))))
+  (var stagger 0)
+  (map-state-cards
+    state
+    (fn [card location]
+      (set z (+ z 1))
+      (let [pos (game-location->view-pos location view)
+            ui-card (. view :cards card)]
+        ;; animate if card location changed
+        (if (not (location-equal ui-card.location location))
+          ;; cart location is the same, so not much to do
+          (let [a ui-card.pos
+                b pos
+                ;; cols are twice as a row is high, so we inflate the row
+                ;; count so left-right movements take as long as top-down.
+                dist  (-> (+ (math.pow (math.abs (* 2 (- a.row b.row))) 2)
+                             (math.pow (math.abs (* 1 (- a.col b.col))) 2))
+                          (math.sqrt))
+                ms-per-dist 5
+                time-to-animate (math.min (* ms-per-dist dist) 200)
+                started-at (+ (vim.loop.now) (* stagger 5))]
+            (set stagger (+ stagger 1))
+            (doto ui-card
+              (tset :z-index (+ 100 z))
+              (tset :animating {:from ui-card.pos
+                                :to pos
+                                :started-at started-at
+                                :time-to-animate time-to-animate})
+              (tset :pos ui-card.pos)))
+          (doto ui-card
+            (tset :z-index z)
+            (tset :animating {})
+            (tset :pos pos)))
+        (doto ui-card
+          (tset :highlight (highlight-group-for-component card))
+          (tset :location location)))))
 
   ;; just copy meta data over directly I guess
   (tset view :meta {:wins meta.wins
@@ -227,6 +260,32 @@
                     :moves (- (length state.events) 3)})
   (tset view :holding? (match state.hand [nil] false [cards] true))
   (tset view :locations locations)
+  (vim.defer_fn #(M.tick view) FRAME-INTERVAL)
+  (values view))
+
+(fn M.tick [view]
+  (var redraw false)
+  (fn lerp [a b t]
+    (math.ceil (+ a (* (- b a) t))))
+  (E.map view.cards
+         (fn [_ card]
+           (match card.animating
+             (where {:from a :to b : time-to-animate : started-at} (<= started-at (vim.loop.now)))
+             (let [rem (- (vim.loop.now) started-at)
+                   t (math.min 1.0 (/ rem time-to-animate))
+                   pos {:row (lerp a.row b.row t)
+                        :col (lerp a.col b.col t)}]
+               (inspect! rem t)
+               (set redraw true)
+               ;; TODO max these vals
+               (tset card :pos pos)
+               (when (<= 1 t)
+                 (tset card :pos b)
+                 (tset card :z-index (- card.z-index 100))
+                 (tset card :animating {}))))))
+  (M.draw view)
+  (if redraw
+    (vim.defer_fn #(M.tick view) FRAME-INTERVAL))
   (values view))
 
 (fn M.draw [view]
@@ -275,10 +334,6 @@
     (let [info-string (fmt "wins: %d moves: %d" view.meta.wins view.meta.moves)
           info (icollect [c (string.gmatch info-string ".")] c)]
       (frame-buffer.write fbo :draw view.layout.info.pos {:height 1 :width (length info)} #(. info $2)))
-
-    (-> (E.map view.cards #$2)
-        (E.sort$ #(< $1.z-index $2.z-index))
-        (E.map #(draw-card fbo $2 $2.location)))
 
     ;; draw lock buttons
     (let [{: row : col} view.layout.buttons.pos
@@ -333,6 +388,11 @@
             pos {:row (+ row 1) :col (- col 2)}]
         (frame-buffer.write fbo :draw pos {:width 3 :height 1} #(match $2 1 "🯁" 2 "🯂" 3 "🯃"))
         (frame-buffer.write fbo :color pos {:width 3 :height 1} #:Normal)))
+
+    ;; draw cards last, so they animate over the top of all other elements
+    (-> (E.map view.cards #$2)
+        (E.sort$ #(< $1.z-index $2.z-index))
+        (E.map #(draw-card fbo $2 $2.location)))
 
     ;; output frame
     (api.nvim_buf_clear_namespace view.buf-id view.hl-ns 0 -1)

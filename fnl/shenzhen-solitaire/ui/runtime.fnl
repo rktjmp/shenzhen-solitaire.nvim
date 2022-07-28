@@ -139,8 +139,6 @@
   (values game))
 
 (fn m.draw [game]
-  (let [{: view :state {: dirty}} game]
-    (ui-view.draw view dirty))
   nil)
 
 (fn m.find-interactable-cards [state]
@@ -314,7 +312,6 @@
 (fn m.interact [game event]
   (let [{: pure : dirty} game.state
         {: cursor : hand-from} game.locations]
-    (inspect! dirty.hand cursor)
     (match [dirty.hand cursor]
       [_ [:BUTTON 1 button]] (let [which (match button 1 :DRAGON-RED 2 :DRAGON-GREEN 3 :DRAGON-WHITE)]
                                (match (logic.lock-dragons-ok? pure which)
@@ -402,7 +399,7 @@
           dirty (m.pure-state->dirty-state pure)]
       (doto game.state
         (tset :pure pure)
-        (tset :dirty dirty))
-     (vim.notify "Undo not enabled, see difficulty.allow-undo"))))
+        (tset :dirty dirty)))
+    (vim.notify "Undo not enabled, see difficulty.allow-undo")))
 
 (values M)
