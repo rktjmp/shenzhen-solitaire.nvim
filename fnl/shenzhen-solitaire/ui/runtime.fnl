@@ -53,8 +53,7 @@
         (tset :locations {:cursor [:tableau 1 5] ;; TODO actually infer a "best start" this from data
                           :hand-from nil
                           :cards (m.find-interactable-cards dirty)
-                          :buttons (m.find-interactable-buttons pure)})
-        (m.update)))
+                          :buttons (m.find-interactable-buttons pure)})))
 
     (fn loop [...]
       ;; we dont want errors in the game code to totally kill the game coroutine
@@ -79,7 +78,7 @@
                                (values loop))
                        [:err e] (values loop))]
         (and-then (coroutine.yield result))))
-    ;; start the loop which will do noting and yield
+    ;; run the first loop with a no-op
     (loop :control :hello))
   (coroutine.create setup))
 

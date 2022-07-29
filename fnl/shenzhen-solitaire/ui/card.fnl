@@ -10,8 +10,7 @@
   ui sets row and col to 0 as this should be updated each draw."
   ;; cards are unique so we can generate a set of them on open and use those
   ;; representations repeatedly.
-  (let [x nil
-        ; edges {:ne :╗ :nw :╔ :se :╝ :sw :╚ :n :═ :s :═ :e :║ :w :║}
+  (let [; edges {:ne :╗ :nw :╔ :se :╝ :sw :╚ :n :═ :s :═ :e :║ :w :║}
         ; edges {:ne :┐ :nw :┌ :se :┘ :sw :└ :n :═ :s :═ :e :│ :w :│}
         ; edges {:ne :╗ :nw :╒ :se :╜ :sw :└ :n :═ :s :─ :e :║ :w :│}
         ; edges {:ne :╮ :nw :╭ :se :╯ :sw :╰ :n :─ :s :─ :e :│ :w :│}

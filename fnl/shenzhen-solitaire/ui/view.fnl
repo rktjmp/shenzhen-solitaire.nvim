@@ -68,10 +68,10 @@
       ;; we use this to work out where to put the cursor, but the adjustments here are
       ;; to shift the cursor up rows to align with the buttons which are drawn differently.
       [:BUTTON _ button] (let [{: row : col} layout.buttons.pos]
-                                (match button
-                                  1 {:row (+ row) : col}
-                                  2 {:row (+ row 1) : col}
-                                  3 {:row (+ row 2) : col}))
+                           (match button
+                             1 {:row (+ row) : col}
+                             2 {:row (+ row 1) : col}
+                             3 {:row (+ row 2) : col}))
 
       _ (error (.. :unknown-location (vim.inspect location))))))
 
