@@ -39,13 +39,20 @@ cards of that type to an unoccupied cell. Once this is done that cell is locked.
 
 ## Commands and Controls
 
-Open a new buffer and run `:ShenzhenSolitaireNewGame` to play, or call `:lua
-require("shenzhen-solitaire")["start-new-game"](buf-id config seed-number)`.
-The command accepts an optional seed number.
+Open a new buffer and run `:ShenzhenSolitaireNewGame` to play a random draw, or
+call `:lua require("shenzhen-solitaire")["start-new-game"](buf-id config
+seed-number)`. The command accepts an optional seed number.
+
+Run `:ShenzhenSolitaireNextGame` to play through a series of selected hands,
+where you must beat the draw to play the next! Over 100¹² meticulously crafted
+hands to play through!
 
 The game will automatically move the `ƒ` to its foundation, as well as any
 suited cards to a foundation if there are no other cards of lower value in
 play. You may disable automatic moves via the configuration.
+
+Shenzhen Solitaire supports keyboard controls but is much more comfortably
+played with a mouse, so the defaults are set to support that.
 
 The default controls are:
 
@@ -53,9 +60,9 @@ The default controls are:
 - `Right Mouse`: return cards to original location. Note you must right click a
   UI element, not blank space.
 - `y`: pickup or put down cards
-- `szw`: save current game
-- `szl`: load last save
-- `szr`: restart current game
+- `ww`: save current game
+- `ll`: load last save
+- `rr`: restart current game
 - `u`: undo last move (if enabled)
 - `<Tab>`: move cursor to next location
 - `<S-Tab>`: move cursor to next location
@@ -73,18 +80,17 @@ The buffer filetype is set to `shenzhen-solitaire` if you would like to run any
 autocommands to clean up the UI.
 
 ```fennel
-  {:card {:size {:width 7 :height 5}
-          :borders {:ne :╮ :nw :╭ :se :╯ :sw :╰ :n :─ :s :─ :e :│ :w :│}}
+{:card {:size {:width 7 :height 5}
+        :borders {:ne :╮ :nw :╭ :se :╯ :sw :╰ :n :─ :s :─ :e :│ :w :│}}
    :buttons {:pos {:row 1 :col 34}}
    :tableau {:pos {:row 7 :col 1}
              :gap 3}
-   :cell {:pos {:row 1
-                :col 1}
+   :cell {:pos {:row 1 :col 1}
           :gap 3}
    :foundation {:pos {:row 1 :col 41}
                 :gap 3}
-   :highlight {:empty {:fg :grey :bg hl-normal-background}
-               :button {:fg :gray :bg hl-normal-background}
+   :highlight {:empty {:fg :#495159 :bg hl-normal-background}
+               :button {:fg :#495159 :bg hl-normal-background}
                :coin {:fg :#e8df78 :bg hl-normal-background}
                :string {:fg :#879ff6 :bg hl-normal-background}
                :myriad {:fg :#23b3ac :bg hl-normal-background}
@@ -94,27 +100,22 @@ autocommands to clean up the UI.
                :dragon-red {:fg :#d34d4d :bg hl-normal-background}}
    :info {:pos {:row 22 :col 3}}
    :size {:width 80 :height 40}
-   :cursor {:show true} ;; show cursor, strongly recommended without a mouse
-   :difficulty {:show-valid-locations true ;; show possible interactive locations, useful without a mouse.
+   :cursor {:show false} ;; show cursor, strongly recommended without a mouse
+   :difficulty {:show-valid-locations false ;; show possible interactive locations, useful without a mouse.
                 :allow-undo false
                 :auto-move-obvious true}
+   :gauntlet false
    :keys {:left-mouse :<LeftMouse>
           :right-mouse :<RightMouse>
           :interact :y
           :auto-move :a
-          :save-game :szw
-          :load-game :szl
-          :restart-game :szr
+          :save-game :ww
+          :load-game :ll
+          :restart-game :rr
           :undo-last-move :u
           :next-location :<Tab>
           :prev-location :<S-Tab>}}
 ```
-
-## TODO
-
-- Option to save after every move and auto-load the last game.
-  - Or possibly hook `BufPreWrite` and allow saving on `:w`.
-- Animation
 
 ## License
 
