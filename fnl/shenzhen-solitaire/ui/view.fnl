@@ -334,10 +334,9 @@
     ;; bottom, this gives us the correct z-indexing
 
     ;; draw info, this is lower than the cards so stacks can over-write it
-    (let [info-string (fmt "%swins: %d moves: %d"
-                           (if view.meta.gauntlet (fmt "level: %d " view.meta.gauntlet) "")
-                           view.meta.wins
-                           view.meta.moves)
+    (let [info-string (if view.meta.gauntlet
+                        (fmt "level: %d moves: %d " view.meta.gauntlet view.meta.moves)
+                        (fmt "wins: %d moves: %d " view.meta.wins view.meta.moves))
           info (icollect [c (string.gmatch info-string ".")] c)]
       (frame-buffer.write fbo :draw view.layout.info.pos {:height 1 :width (length info)} #(. info $2)))
 
