@@ -129,7 +129,7 @@
                        :cell config.cell
                        :buttons config.buttons
                        :card config.card}}]
-    (tset view :cards (-> (map-state-cards state #(game-card->ui-card $1 $2 view))
+    (tset view :cards (-> (map-state-cards state #(game-card->ui-card $1 [:foundation 4 1] view))
                           (enum/pairs->table)))
     (tset view :placeholders (-> [(enum/map #(iter/range 1 8) #[:tableau $1 1])
                                   (enum/map #(iter/range 1 3) #[:cell $1 1])
