@@ -5,7 +5,7 @@
 
 
 
- local E = require("shenzhen-solitaire.lib.donut.enum") local function _2_(...) local mod_44_auto = require("shenzhen-solitaire.lib.donut.iter") local keys_45_auto = {"range"} for __48_auto, key_49_auto in ipairs(keys_45_auto) do assert(not (nil == (mod_44_auto)[key_49_auto]), string.format("mod did not have key %s %s", key_49_auto, "\"shenzhen-solitaire.lib.donut.iter\"")) end return mod_44_auto end local _local_1_ = _2_(...) local iter_2frange = _local_1_["range"] do local _ = {nil, nil} end
+ local E = require("shenzhen-solitaire.lib.donut.enum") local function _2_(...) local mod_36_auto = require("shenzhen-solitaire.lib.donut.iter") local keys_37_auto = {"range"} for __40_auto, key_41_auto in ipairs(keys_37_auto) do assert(not (nil == (mod_36_auto)[key_41_auto]), string.format("mod did not have key %s %s", key_41_auto, "\"shenzhen-solitaire.lib.donut.iter\"")) end return mod_36_auto end local _local_1_ = _2_(...) local iter_2frange = _local_1_["range"] do local _ = {nil, nil} end
 
 
  local M = {}
@@ -85,11 +85,12 @@
  M["valid-sequence?"] = function(stack)
 
 
- local function alternating_suit_and_dec_value_3f(_27_) local _arg_28_ = _27_ local head = _arg_28_[1] local tail = (function (t, k) local mt = getmetatable(t) if "table" == type(mt) and mt.__fennelrest then return mt.__fennelrest(t, k) else return {(table.unpack or unpack)(t, k)} end end)(_arg_28_, 2)
+ local function alternating_suit_and_dec_value_3f(_27_) local _arg_28_ = _27_ local head = _arg_28_[1] local tail = (function (t, k, e) local mt = getmetatable(t) if 'table' == type(mt) and mt.__fennelrest then return mt.__fennelrest(t, k) elseif e then local rest = {} for k, v in pairs(t) do if not e[k] then rest[k] = v end end return rest else return {(table.unpack or unpack)(t, k)} end end)(_arg_28_, 2)
 
 
  local function _29_(_241, _242, _243) local _30_ = {_241, _243} local function _31_() local ls = ((_30_)[1])[1] local lv = ((_30_)[1])[2] local s = ((_30_)[2])[1] local v = ((_30_)[2])[2] return (not (ls == s) and (v == (lv - 1))) end if (((_G.type(_30_) == "table") and ((_G.type((_30_)[1]) == "table") and (nil ~= ((_30_)[1])[1]) and (nil ~= ((_30_)[1])[2])) and ((_G.type((_30_)[2]) == "table") and (nil ~= ((_30_)[2])[1]) and (nil ~= ((_30_)[2])[2]))) and _31_()) then local ls = ((_30_)[1])[1] local lv = ((_30_)[1])[2] local s = ((_30_)[2])[1] local v = ((_30_)[2])[2]
  return _243 else return nil end end return not (nil == E.reduce(tail, head, _29_)) end
+
  local function contains_no_specials_3f(run)
  local function _33_(_241, _242) return M["special-card?"](_242) end return E["empty?"](E.filter(run, _33_)) end
 

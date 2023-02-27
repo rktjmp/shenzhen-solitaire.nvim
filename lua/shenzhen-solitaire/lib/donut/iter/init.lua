@@ -39,13 +39,13 @@
  return next_i, val else return nil end end
  return gen, seq, initial_state end
 
- M.fwd = function(seq, _3fstep) _G.assert((nil ~= seq), "Missing argument seq on /home/soup/.local/share/nvim/site/pack/manual/start/shenzhen-solitaire.nvim/fnl/shenzhen-solitaire/lib/donut/iter/init.fnl:42")
+ M.fwd = function(seq, _3fstep) _G.assert((nil ~= seq), "Missing argument seq on ./fnl/shenzhen-solitaire/lib/donut/iter/init.fnl:42")
 
  local step = (_3fstep or 1)
  return xward("fward", seq, step, 1, (1 - step)) end
  M["ipairs"] = M.fward
 
- M.bwd = function(seq, _3fstep) _G.assert((nil ~= seq), "Missing argument seq on /home/soup/.local/share/nvim/site/pack/manual/start/shenzhen-solitaire.nvim/fnl/shenzhen-solitaire/lib/donut/iter/init.fnl:48")
+ M.bwd = function(seq, _3fstep) _G.assert((nil ~= seq), "Missing argument seq on ./fnl/shenzhen-solitaire/lib/donut/iter/init.fnl:48")
 
  local step = (_3fstep or 1)
  return xward("bward", seq, step, -1, (#seq + step)) end

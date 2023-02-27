@@ -3,13 +3,13 @@
 
 
 
- local function _2_(...) local mod_44_auto = require("shenzhen-solitaire.lib.donut.iter") local keys_45_auto = {"range"} for __48_auto, key_49_auto in ipairs(keys_45_auto) do assert(not (nil == (mod_44_auto)[key_49_auto]), string.format("mod did not have key %s %s", key_49_auto, "\"shenzhen-solitaire.lib.donut.iter\"")) end return mod_44_auto end local _local_1_ = _2_(...) local iter_2frange = _local_1_["range"] local function _4_(...) local mod_44_auto = require("shenzhen-solitaire.lib.donut.inspect") local keys_45_auto = {"inspect!"} for __48_auto, key_49_auto in ipairs(keys_45_auto) do assert(not (nil == (mod_44_auto)[key_49_auto]), string.format("mod did not have key %s %s", key_49_auto, "\"shenzhen-solitaire.lib.donut.inspect\"")) end return mod_44_auto end local _local_3_ = _4_(...) local inspect_21 = _local_3_["inspect!"] local function _6_(...) local mod_44_auto = require("shenzhen-solitaire.lib.donut.enum") local keys_45_auto = {"each", "flat-map", "pairs->table", "set$", "flatten", "split", "map", "reduce"} for __48_auto, key_49_auto in ipairs(keys_45_auto) do assert(not (nil == (mod_44_auto)[key_49_auto]), string.format("mod did not have key %s %s", key_49_auto, "\"shenzhen-solitaire.lib.donut.enum\"")) end return mod_44_auto end local _local_5_ = _6_(...) local enum_2feach = _local_5_["each"] local enum_2fflat_map = _local_5_["flat-map"] local enum_2fflatten = _local_5_["flatten"] local enum_2fmap = _local_5_["map"] local enum_2fpairs__3etable = _local_5_["pairs->table"] local enum_2freduce = _local_5_["reduce"] local enum_2fset_24 = _local_5_["set$"] local enum_2fsplit = _local_5_["split"] local E = require("shenzhen-solitaire.lib.donut.enum") local function _8_(...) local mod_44_auto = require("shenzhen-solitaire.game.logic") local keys_45_auto = {"start-new-game"} for __48_auto, key_49_auto in ipairs(keys_45_auto) do assert(not (nil == (mod_44_auto)[key_49_auto]), string.format("mod did not have key %s %s", key_49_auto, "\"shenzhen-solitaire.game.logic\"")) end return mod_44_auto end local _local_7_ = _8_(...) local start_new_game = _local_7_["start-new-game"] local function _10_(...)
+ local function _2_(...) local mod_36_auto = require("shenzhen-solitaire.lib.donut.iter") local keys_37_auto = {"range"} for __40_auto, key_41_auto in ipairs(keys_37_auto) do assert(not (nil == (mod_36_auto)[key_41_auto]), string.format("mod did not have key %s %s", key_41_auto, "\"shenzhen-solitaire.lib.donut.iter\"")) end return mod_36_auto end local _local_1_ = _2_(...) local iter_2frange = _local_1_["range"] local function _4_(...) local mod_36_auto = require("shenzhen-solitaire.lib.donut.inspect") local keys_37_auto = {"inspect!"} for __40_auto, key_41_auto in ipairs(keys_37_auto) do assert(not (nil == (mod_36_auto)[key_41_auto]), string.format("mod did not have key %s %s", key_41_auto, "\"shenzhen-solitaire.lib.donut.inspect\"")) end return mod_36_auto end local _local_3_ = _4_(...) local inspect_21 = _local_3_["inspect!"] local function _6_(...) local mod_36_auto = require("shenzhen-solitaire.lib.donut.enum") local keys_37_auto = {"split", "map", "flat-map", "flatten", "pairs->table", "set$", "reduce", "each"} for __40_auto, key_41_auto in ipairs(keys_37_auto) do assert(not (nil == (mod_36_auto)[key_41_auto]), string.format("mod did not have key %s %s", key_41_auto, "\"shenzhen-solitaire.lib.donut.enum\"")) end return mod_36_auto end local _local_5_ = _6_(...) local enum_2feach = _local_5_["each"] local enum_2fflat_map = _local_5_["flat-map"] local enum_2fflatten = _local_5_["flatten"] local enum_2fmap = _local_5_["map"] local enum_2fpairs__3etable = _local_5_["pairs->table"] local enum_2freduce = _local_5_["reduce"] local enum_2fset_24 = _local_5_["set$"] local enum_2fsplit = _local_5_["split"] local E = require("shenzhen-solitaire.lib.donut.enum") local function _8_(...) local mod_36_auto = require("shenzhen-solitaire.game.logic") local keys_37_auto = {"start-new-game"} for __40_auto, key_41_auto in ipairs(keys_37_auto) do assert(not (nil == (mod_36_auto)[key_41_auto]), string.format("mod did not have key %s %s", key_41_auto, "\"shenzhen-solitaire.game.logic\"")) end return mod_36_auto end local _local_7_ = _8_(...) local start_new_game = _local_7_["start-new-game"] local function _10_(...)
 
 
 
 
 
- local mod_44_auto = string local keys_45_auto = {"format"} for __48_auto, key_49_auto in ipairs(keys_45_auto) do assert(not (nil == (mod_44_auto)[key_49_auto]), string.format("mod did not have key %s %s", key_49_auto, "string")) end return mod_44_auto end local _local_9_ = _10_(...) local fmt = _local_9_["format"] local frame_buffer = require("shenzhen-solitaire.ui.frame-buffer") local ui_card = require("shenzhen-solitaire.ui.card") do local _ = {nil, nil, nil, nil, nil, nil, nil, nil} end
+ local mod_36_auto = string local keys_37_auto = {"format"} for __40_auto, key_41_auto in ipairs(keys_37_auto) do assert(not (nil == (mod_36_auto)[key_41_auto]), string.format("mod did not have key %s %s", key_41_auto, "string")) end return mod_36_auto end local _local_9_ = _10_(...) local fmt = _local_9_["format"] local frame_buffer = require("shenzhen-solitaire.ui.frame-buffer") local ui_card = require("shenzhen-solitaire.ui.card") do local _ = {nil, nil, nil, nil, nil, nil, nil, nil} end
 
 
 
@@ -33,7 +33,23 @@
  local function game_location__3eview_pos(location, view)
 
  local _let_14_ = view local layout = _let_14_["layout"]
- local _15_ = location if ((_G.type(_15_) == "table") and ((_15_)[1] == "tableau") and (nil ~= (_15_)[2]) and (nil ~= (_15_)[3])) then local col_n = (_15_)[2] local card_n = (_15_)[3] return {row = (layout.tableau.pos.row + ((card_n - 1) * 2)), col = (layout.tableau.pos.col + layout.tableau.gap + ((col_n - 1) * (layout.tableau.gap + layout.card.size.width)))} elseif ((_G.type(_15_) == "table") and ((_15_)[1] == "cell") and (nil ~= (_15_)[2]) and (nil ~= (_15_)[3])) then local col_n = (_15_)[2] local card_n = (_15_)[3] return {row = layout.cell.pos.row, col = (layout.cell.pos.col + layout.cell.gap + ((col_n - 1) * (layout.cell.gap + layout.card.size.width)))} elseif ((_G.type(_15_) == "table") and ((_15_)[1] == "foundation") and ((_15_)[2] == 4) and (nil ~= (_15_)[3])) then local card_n = (_15_)[3] return {row = layout.foundation.pos.row, col = (layout.foundation.gap + layout.foundation.pos.col + ((1 - 1) * (layout.foundation.gap + layout.card.size.width)))} elseif ((_G.type(_15_) == "table") and ((_15_)[1] == "foundation") and (nil ~= (_15_)[2]) and (nil ~= (_15_)[3])) then local col_n = (_15_)[2] local card_n = (_15_)[3] return {row = layout.foundation.pos.row, col = (layout.foundation.gap + layout.foundation.pos.col + layout.card.size.width + layout.foundation.gap + ((col_n - 1) * (layout.foundation.gap + layout.card.size.width)))} elseif ((_G.type(_15_) == "table") and ((_15_)[1] == "hand") and (nil ~= (_15_)[2]) and (nil ~= (_15_)[3])) then local col_n = (_15_)[2] local card_n = (_15_)[3] local _let_16_ = view local _let_17_ = _let_16_["locations"]
+ local _15_ = location if ((_G.type(_15_) == "table") and ((_15_)[1] == "tableau") and (nil ~= (_15_)[2]) and (nil ~= (_15_)[3])) then local col_n = (_15_)[2] local card_n = (_15_)[3]
+ return {row = (layout.tableau.pos.row + ((card_n - 1) * 2)), col = (layout.tableau.pos.col + layout.tableau.gap + ((col_n - 1) * (layout.tableau.gap + layout.card.size.width)))} elseif ((_G.type(_15_) == "table") and ((_15_)[1] == "cell") and (nil ~= (_15_)[2]) and (nil ~= (_15_)[3])) then local col_n = (_15_)[2] local card_n = (_15_)[3]
+
+
+
+
+ return {row = layout.cell.pos.row, col = (layout.cell.pos.col + layout.cell.gap + ((col_n - 1) * (layout.cell.gap + layout.card.size.width)))} elseif ((_G.type(_15_) == "table") and ((_15_)[1] == "foundation") and ((_15_)[2] == 4) and (nil ~= (_15_)[3])) then local card_n = (_15_)[3]
+
+
+
+
+ return {row = layout.foundation.pos.row, col = (layout.foundation.gap + layout.foundation.pos.col + ((1 - 1) * (layout.foundation.gap + layout.card.size.width)))} elseif ((_G.type(_15_) == "table") and ((_15_)[1] == "foundation") and (nil ~= (_15_)[2]) and (nil ~= (_15_)[3])) then local col_n = (_15_)[2] local card_n = (_15_)[3]
+
+
+
+
+ return {row = layout.foundation.pos.row, col = (layout.foundation.gap + layout.foundation.pos.col + layout.card.size.width + layout.foundation.gap + ((col_n - 1) * (layout.foundation.gap + layout.card.size.width)))} elseif ((_G.type(_15_) == "table") and ((_15_)[1] == "hand") and (nil ~= (_15_)[2]) and (nil ~= (_15_)[3])) then local col_n = (_15_)[2] local card_n = (_15_)[3]
 
 
 
@@ -43,35 +59,19 @@
 
 
 
+ local _let_16_ = view local _let_17_ = _let_16_["locations"] local cursor = _let_17_["cursor"]
+ local _let_18_ = cursor local slot = _let_18_[1] local cur_col_n = _let_18_[2] local cur_card_n = _let_18_[3]
+ local _let_19_ = game_location__3eview_pos({slot, cur_col_n, ((cur_card_n - 1) + card_n)}, view) local row = _let_19_["row"] local col = _let_19_["col"]
 
 
+ return {row = row, col = (col + 1)} elseif ((_G.type(_15_) == "table") and ((_15_)[1] == "BUTTON") and true and (nil ~= (_15_)[3])) then local _ = (_15_)[2] local button = (_15_)[3]
 
 
-
-
-
-
-
-
-
-
-
-
-
-
- local cursor = _let_17_["cursor"] local _let_18_ = cursor
- local slot = _let_18_[1] local cur_col_n = _let_18_[2] local cur_card_n = _let_18_[3] local _let_19_ = game_location__3eview_pos({slot, cur_col_n, ((cur_card_n - 1) + card_n)}, view)
- local row = _let_19_["row"] local col = _let_19_["col"] return {row = row, col = (col + 1)} elseif ((_G.type(_15_) == "table") and ((_15_)[1] == "BUTTON") and true and (nil ~= (_15_)[3])) then local _ = (_15_)[2] local button = (_15_)[3] local _let_20_ = layout.buttons.pos
-
-
-
-
-
- local row = _let_20_["row"] local col = _let_20_["col"]
- local _21_ = button if (_21_ == 1) then return {row = row, col = col} elseif (_21_ == 2) then return {row = (row + 1), col = col} elseif (_21_ == 3) then return {row = (row + 2), col = col} else return nil end elseif true then local _ = _15_
-
-
-
+ local _let_20_ = layout.buttons.pos local row = _let_20_["row"] local col = _let_20_["col"]
+ local _21_ = button if (_21_ == 1) then
+ return {row = row, col = col} elseif (_21_ == 2) then
+ return {row = (row + 1), col = col} elseif (_21_ == 3) then
+ return {row = (row + 2), col = col} else return nil end elseif true then local _ = _15_
 
  return error(("unknown-location" .. vim.inspect(location))) else return nil end end
 
@@ -110,7 +110,7 @@
 
 
 
- local view = {["buf-id"] = buf_id, winid = api.nvim_buf_call(buf_id, api.nvim_get_current_win), responder = responder, ["hl-ns"] = api.nvim_create_namespace("shenzhen-solitaire"), show = {cursor = config.cursor.show, ["valid-locations"] = config.difficulty["show-valid-locations"]}, locations = {cursor = {"tableau", 1, 5}}, ["holding?"] = false, meta = {}, layout = {size = {width = 80, height = 40}, info = config.info, tableau = config.tableau, foundation = config.foundation, cell = config.cell, buttons = config.buttons, card = config.card}}
+ local view = {["buf-id"] = buf_id, winid = api.nvim_buf_call(buf_id, api.nvim_get_current_win), responder = responder, ["hl-ns"] = api.nvim_create_namespace("shenzhen-solitaire"), show = {cursor = config.cursor.show, ["valid-locations"] = config.difficulty["show-valid-locations"]}, locations = {cursor = {"tableau", 1, 5}}, meta = {}, layout = {size = {width = 80, height = 40}, info = config.info, tableau = config.tableau, foundation = config.foundation, cell = config.cell, buttons = config.buttons, card = config.card}, ["holding?"] = false}
 
 
 
@@ -135,8 +135,8 @@
  local function _33_() return iter_2frange(1, 3) end local function _34_(_241) return {"cell", _241, 1} end
  local function _35_() return iter_2frange(1, 4) end local function _36_(_241) return {"foundation", _241, 1} end
 
- local function _37_(_, location) local _let_38_ = game_card__3eui_card({"EMPTY", 0}, location, view)
- local _0 = _let_38_[1] local ui_card0 = _let_38_[2]
+ local function _37_(_, location)
+ local _let_38_ = game_card__3eui_card({"EMPTY", 0}, location, view) local _0 = _let_38_[1] local ui_card0 = _let_38_[2]
  return {ui_card0, location} end view["placeholders"] = enum_2fmap(enum_2fflatten({enum_2fmap(_31_, _32_), enum_2fmap(_33_, _34_), enum_2fmap(_35_, _36_)}), _37_)
  do local set_hl local function _39_(_241, _242) return api.nvim_set_hl(0, highlight_group_for_component({_241, 0}), _242) end set_hl = _39_
  set_hl("EMPTY", config.highlight.empty)
@@ -151,12 +151,12 @@
 
  do local _let_40_ = view local buf_id0 = _let_40_["buf-id"] local responder0 = _let_40_["responder"] local set_km
  local function _41_(_241, _242)
- local function _42_() return responder0({name = _241, view = view}) end return api.nvim_buf_set_keymap(buf_id0, "n", config.keys[_241], "", {callback = _42_, noremap = false, nowait = true, desc = _242}) end set_km = _41_
+ local function _42_() return responder0({name = _241, view = view}) end return api.nvim_buf_set_keymap(buf_id0, "n", config.keys[_241], "", {callback = _42_, nowait = true, desc = _242, noremap = false}) end set_km = _41_
 
 
 
  do local buf_opts = {filetype = "shenzhen-solitaire"}
- local win_opts = {cursorline = false, number = false, list = false, relativenumber = false}
+ local win_opts = {relativenumber = false, list = false, cursorline = false, number = false}
 
 
 
@@ -238,18 +238,18 @@
  local time_to_animate = math.min((ms_per_dist * dist), 200)
  local started_at = (vim.loop.now() + (stagger * 25))
  stagger = (stagger + 1)
- local _67_ = ui_card0 _67_["z-index"] = (100 + z) do end (_67_)["animating"] = {from = ui_card0.pos, to = pos, ["started-at"] = started_at, ["time-to-animate"] = time_to_animate} _67_["pos"] = ui_card0.pos else
+ ui_card0["z-index"] = (100 + z) do end (ui_card0)["animating"] = {from = ui_card0.pos, to = pos, ["started-at"] = started_at, ["time-to-animate"] = time_to_animate} ui_card0["pos"] = ui_card0.pos else
 
 
 
 
 
 
- local _68_ = ui_card0 _68_["z-index"] = z _68_["animating"] = nil _68_["pos"] = pos end
+ ui_card0["z-index"] = z ui_card0["animating"] = nil ui_card0["pos"] = pos end
 
 
 
- local _70_ = ui_card0 _70_["highlight"] = highlight_group_for_component(card) do end (_70_)["location"] = location return _70_ end map_state_cards(state, _66_)
+ ui_card0["highlight"] = highlight_group_for_component(card) do end (ui_card0)["location"] = location return ui_card0 end map_state_cards(state, _66_)
 
 
 
@@ -259,9 +259,9 @@
 
 
 
- local _72_ do local _71_ = state.hand if ((_G.type(_71_) == "table") and ((_71_)[1] == nil)) then _72_ = false elseif ((_G.type(_71_) == "table") and (nil ~= (_71_)[1])) then local cards = (_71_)[1] _72_ = true else _72_ = nil end end view["holding?"] = _72_
+ local _69_ do local _68_ = state.hand if ((_G.type(_68_) == "table") and ((_68_)[1] == nil)) then _69_ = false elseif ((_G.type(_68_) == "table") and (nil ~= (_68_)[1])) then local cards = (_68_)[1] _69_ = true else _69_ = nil end end view["holding?"] = _69_
  view["locations"] = locations
- local function _76_() return M.tick(view) end vim.defer_fn(_76_, FRAME_INTERVAL)
+ local function _73_() return M.tick(view) end vim.defer_fn(_73_, FRAME_INTERVAL)
  return view end
 
  M.tick = function(view, last_time) local redraw = false
@@ -269,12 +269,12 @@
  local function lerp(a, b, t)
  return math.ceil((a + ((b - a) * t))) end
 
- local function _77_(_, card)
- local _78_ do local t_79_ = card if (nil ~= t_79_) then t_79_ = (t_79_).animating else end _78_ = t_79_ end local function _81_() local started_at = (_78_)["started-at"] local b = (_78_).to local time_to_animate = (_78_)["time-to-animate"] local a = (_78_).from return (started_at <= vim.loop.now()) end if (((_G.type(_78_) == "table") and (nil ~= (_78_)["started-at"]) and (nil ~= (_78_).to) and (nil ~= (_78_)["time-to-animate"]) and (nil ~= (_78_).from)) and _81_()) then local started_at = (_78_)["started-at"] local b = (_78_).to local time_to_animate = (_78_)["time-to-animate"] local a = (_78_).from
+ local function _74_(_, card)
+ local _75_ do local t_76_ = card if (nil ~= t_76_) then t_76_ = (t_76_).animating else end _75_ = t_76_ end local function _78_() local a = (_75_).from local b = (_75_).to local time_to_animate = (_75_)["time-to-animate"] local started_at = (_75_)["started-at"] return (started_at <= vim.loop.now()) end if (((_G.type(_75_) == "table") and (nil ~= (_75_).from) and (nil ~= (_75_).to) and (nil ~= (_75_)["time-to-animate"]) and (nil ~= (_75_)["started-at"])) and _78_()) then local a = (_75_).from local b = (_75_).to local time_to_animate = (_75_)["time-to-animate"] local started_at = (_75_)["started-at"]
 
  local rem = (vim.loop.now() - started_at)
- local t = math.min(1, (rem / time_to_animate)) local pos = {row = lerp(a.row, b.row, t), col = lerp(a.col, b.col, t)} redraw = true
-
+ local t = math.min(1, (rem / time_to_animate))
+ local pos = {row = lerp(a.row, b.row, t), col = lerp(a.col, b.col, t)} redraw = true
 
 
 
@@ -282,13 +282,13 @@
  if (1 <= t) then
  card["pos"] = b
  card["z-index"] = (card["z-index"] - 100)
- do end (card)["animating"] = nil return nil else return nil end else return nil end end E.map(view.cards, _77_)
+ do end (card)["animating"] = nil return nil else return nil end else return nil end end E.map(view.cards, _74_)
  M.draw(view)
 
 
 
  if (redraw or last_time) then
- local function _84_() return M.tick(view, redraw) end vim.defer_fn(_84_, FRAME_INTERVAL) else end
+ local function _81_() return M.tick(view, redraw) end vim.defer_fn(_81_, FRAME_INTERVAL) else end
  return view end
 
  M.draw = function(view)
@@ -298,27 +298,27 @@
 
 
  local function draw_card(fbo, card, location)
- local _let_86_ = card local pos = _let_86_["pos"] local size = _let_86_["size"] local bitmap = _let_86_["bitmap"] local highlight = _let_86_["highlight"] local edge_hl = "Normal" local pos__3echar
+ local _let_83_ = card local pos = _let_83_["pos"] local size = _let_83_["size"] local bitmap = _let_83_["bitmap"] local highlight = _let_83_["highlight"] local edge_hl = "Normal" local pos__3echar
 
- local function _87_(r, c) return bitmap[r][c] end pos__3echar = _87_ local pos__3ehl
- local function _88_(r, c)
- local _89_ = {r, c} if true then local _ = _89_
- return highlight elseif ((_G.type(_89_) == "table") and ((_89_)[1] == 1) and true) then local _ = (_89_)[2]
- return edge_hl elseif ((_G.type(_89_) == "table") and ((_89_)[1] == size.height) and true) then local _ = (_89_)[2]
- return edge_hl elseif ((_G.type(_89_) == "table") and true and ((_89_)[2] == 1)) then local _ = (_89_)[1]
- return edge_hl elseif ((_G.type(_89_) == "table") and true and ((_89_)[2] == size.width)) then local _ = (_89_)[1]
- return edge_hl else return nil end end pos__3ehl = _88_ local write
- local function _91_(_241, _242) return frame_buffer.write(fbo, _241, pos, size, _242) end write = _91_
+ local function _84_(r, c) return bitmap[r][c] end pos__3echar = _84_ local pos__3ehl
+ local function _85_(r, c)
+ local _86_ = {r, c} if true then local _ = _86_
+ return highlight elseif ((_G.type(_86_) == "table") and ((_86_)[1] == 1) and true) then local _ = (_86_)[2]
+ return edge_hl elseif ((_G.type(_86_) == "table") and ((_86_)[1] == size.height) and true) then local _ = (_86_)[2]
+ return edge_hl elseif ((_G.type(_86_) == "table") and true and ((_86_)[2] == 1)) then local _ = (_86_)[1]
+ return edge_hl elseif ((_G.type(_86_) == "table") and true and ((_86_)[2] == size.width)) then local _ = (_86_)[1]
+ return edge_hl else return nil end end pos__3ehl = _85_ local write
+ local function _88_(_241, _242) return frame_buffer.write(fbo, _241, pos, size, _242) end write = _88_
  assert(location, "no location")
  write("draw", pos__3echar)
  write("color", pos__3ehl)
- local function _92_() return location end return write("hit", _92_) end
+ local function _89_() return location end return write("hit", _89_) end
 
  local function adjust_location_for_pickup_or_putdown(location)
 
 
  if view["holding?"] then
- local _let_93_ = location local slot = _let_93_[1] local col_n = _let_93_[2] local card_n = _let_93_[3]
+ local _let_90_ = location local slot = _let_90_[1] local col_n = _let_90_[2] local card_n = _let_90_[3]
  return {slot, col_n, math.max(1, (card_n - 1))} else
  return location end end
 
@@ -326,8 +326,8 @@
  view.fbo = fbo _ = nil
 
 
- local function _95_(_241, _242) local _let_96_ = _242 local card = _let_96_[1] local _0 = _let_96_[2]
- return draw_card(fbo, card, card.location) end E.each(view.placeholders, _95_)
+ local function _92_(_241, _242) local _let_93_ = _242 local card = _let_93_[1] local _0 = _let_93_[2]
+ return draw_card(fbo, card, card.location) end E.each(view.placeholders, _92_)
 
 
 
@@ -337,80 +337,80 @@
  do local info_string if view.meta.gauntlet then
  info_string = fmt("level: %d moves: %d ", view.meta.gauntlet, view.meta.moves) else
  info_string = fmt("wins: %d moves: %d ", view.meta.wins, view.meta.moves) end local info
- do local tbl_15_auto = {} local i_16_auto = #tbl_15_auto for c in string.gmatch(info_string, ".") do local val_17_auto = c if (nil ~= val_17_auto) then i_16_auto = (i_16_auto + 1) do end (tbl_15_auto)[i_16_auto] = val_17_auto else end end info = tbl_15_auto end
- local function _99_(_241, _242) return info[_242] end frame_buffer.write(fbo, "draw", view.layout.info.pos, {height = 1, width = #info}, _99_) end
+ do local tbl_17_auto = {} local i_18_auto = #tbl_17_auto for c in string.gmatch(info_string, ".") do local val_19_auto = c if (nil ~= val_19_auto) then i_18_auto = (i_18_auto + 1) do end (tbl_17_auto)[i_18_auto] = val_19_auto else end end info = tbl_17_auto end
+ local function _96_(_241, _242) return info[_242] end frame_buffer.write(fbo, "draw", view.layout.info.pos, {height = 1, width = #info}, _96_) end
 
 
- do local _let_100_ = view.layout.buttons.pos local row = _let_100_["row"] local col = _let_100_["col"]
+ do local _let_97_ = view.layout.buttons.pos local row = _let_97_["row"] local col = _let_97_["col"]
  local col0 = (col + 2)
  local red_text = {"<", " ", "\197\160"}
  local green_text = {"<", " ", "\195\145"}
  local white_text = {"<", " ", "\195\149"} local write
- local function _101_(_241, _242, _243) return frame_buffer.write(fbo, _241, {row = (_242 + row), col = col0}, {width = 3, height = 1}, _243) end write = _101_ local on_off
+ local function _98_(_241, _242, _243) return frame_buffer.write(fbo, _241, {row = (_242 + row), col = col0}, {width = 3, height = 1}, _243) end write = _98_ local on_off
 
 
 
 
- local function _102_(_241, _242, _243) local _103_ = _243 if ((_G.type(_103_) == "table") and ((_103_)[1] == "BUTTON") and ((_103_)[2] == 1) and ((_103_)[3] == 1)) then
- return E["set$"](_241, "RED", _243) elseif ((_G.type(_103_) == "table") and ((_103_)[1] == "BUTTON") and ((_103_)[2] == 1) and ((_103_)[3] == 2)) then
- return E["set$"](_241, "GREEN", _243) elseif ((_G.type(_103_) == "table") and ((_103_)[1] == "BUTTON") and ((_103_)[2] == 1) and ((_103_)[3] == 3)) then
- return E["set$"](_241, "WHITE", _243) elseif true then local _0 = _103_
- return _241 else return nil end end on_off = E.reduce(view.locations.buttons, {}, _102_)
- local function _105_(_241, _242) return red_text[_242] end write("draw", 1, _105_)
+ local function _99_(_241, _242, _243) local _100_ = _243 if ((_G.type(_100_) == "table") and ((_100_)[1] == "BUTTON") and ((_100_)[2] == 1) and ((_100_)[3] == 1)) then
+ return E["set$"](_241, "RED", _243) elseif ((_G.type(_100_) == "table") and ((_100_)[1] == "BUTTON") and ((_100_)[2] == 1) and ((_100_)[3] == 2)) then
+ return E["set$"](_241, "GREEN", _243) elseif ((_G.type(_100_) == "table") and ((_100_)[1] == "BUTTON") and ((_100_)[2] == 1) and ((_100_)[3] == 3)) then
+ return E["set$"](_241, "WHITE", _243) elseif true then local _0 = _100_
+ return _241 else return nil end end on_off = E.reduce(view.locations.buttons, {}, _99_)
+ local function _102_(_241, _242) return red_text[_242] end write("draw", 1, _102_)
  if on_off.RED then
 
- local function _106_() return highlight_group_for_component({"DRAGON-RED", 0}) end write("color", 1, _106_)
- local function _107_() return on_off.RED end write("hit", 1, _107_) else
- local function _108_() return highlight_group_for_component({"BUTTON", 0}) end write("color", 1, _108_) end
+ local function _103_() return highlight_group_for_component({"DRAGON-RED", 0}) end write("color", 1, _103_)
+ local function _104_() return on_off.RED end write("hit", 1, _104_) else
+ local function _105_() return highlight_group_for_component({"BUTTON", 0}) end write("color", 1, _105_) end
 
- local function _110_(_241, _242) return green_text[_242] end write("draw", 2, _110_)
+ local function _107_(_241, _242) return green_text[_242] end write("draw", 2, _107_)
  if on_off.GREEN then
 
- local function _111_() return highlight_group_for_component({"DRAGON-GREEN", 0}) end write("color", 2, _111_)
- local function _112_() return on_off.GREEN end write("hit", 2, _112_) else
- local function _113_() return highlight_group_for_component({"BUTTON", 0}) end write("color", 2, _113_) end
+ local function _108_() return highlight_group_for_component({"DRAGON-GREEN", 0}) end write("color", 2, _108_)
+ local function _109_() return on_off.GREEN end write("hit", 2, _109_) else
+ local function _110_() return highlight_group_for_component({"BUTTON", 0}) end write("color", 2, _110_) end
 
- local function _115_(_241, _242) return white_text[_242] end write("draw", 3, _115_)
+ local function _112_(_241, _242) return white_text[_242] end write("draw", 3, _112_)
  if on_off.WHITE then
 
- local function _116_() return highlight_group_for_component({"DRAGON-WHITE", 0}) end write("color", 3, _116_)
- local function _117_() return on_off.WHITE end write("hit", 3, _117_) else
- local function _118_() return highlight_group_for_component({"BUTTON", 0}) end write("color", 3, _118_) end end
+ local function _113_() return highlight_group_for_component({"DRAGON-WHITE", 0}) end write("color", 3, _113_)
+ local function _114_() return on_off.WHITE end write("hit", 3, _114_) else
+ local function _115_() return highlight_group_for_component({"BUTTON", 0}) end write("color", 3, _115_) end end
 
 
  if view.show["valid-locations"] then
  for i, location in ipairs(view.locations.cards) do
- local _let_120_ = game_location__3eview_pos(adjust_location_for_pickup_or_putdown(location), view) local row = _let_120_["row"] local col = _let_120_["col"]
+ local _let_117_ = game_location__3eview_pos(adjust_location_for_pickup_or_putdown(location), view) local row = _let_117_["row"] local col = _let_117_["col"]
 
  local pos = {row = (row + 1), col = (col - 2)}
- local function _121_() return "\226\150\184" end frame_buffer.write(fbo, "draw", pos, {width = 1, height = 1}, _121_)
- local function _122_() return highlight_group_for_component({"BUTTON", 0}) end frame_buffer.write(fbo, "color", pos, {width = 1, height = 1}, _122_) end else end
+ local function _118_() return "\226\150\184" end frame_buffer.write(fbo, "draw", pos, {width = 1, height = 1}, _118_)
+ local function _119_() return highlight_group_for_component({"BUTTON", 0}) end frame_buffer.write(fbo, "color", pos, {width = 1, height = 1}, _119_) end else end
 
 
- local function _124_(_241, _242) return _242 end
- local function _125_(_241, _242) local _126_ = _242 if ((_G.type(_126_) == "table") and (nil ~= (_126_).animating)) then local animating = (_126_).animating return false elseif true then local _0 = _126_ return true else return nil end end
- local function _128_(_241, _242) return (_241["z-index"] < _242["z-index"]) end
- local function _129_(_241, _242) return draw_card(fbo, _242, _242.location) end E.map(E["sort$"](E.filter(E.map(view.cards, _124_), _125_), _128_), _129_)
+ local function _121_(_241, _242) return _242 end
+ local function _122_(_241, _242) local _123_ = _242 if ((_G.type(_123_) == "table") and (nil ~= (_123_).animating)) then local animating = (_123_).animating return false elseif true then local _0 = _123_ return true else return nil end end
+ local function _125_(_241, _242) return (_241["z-index"] < _242["z-index"]) end
+ local function _126_(_241, _242) return draw_card(fbo, _242, _242.location) end E.map(E["sort$"](E.filter(E.map(view.cards, _121_), _122_), _125_), _126_)
 
 
  if view.show.cursor then
- local _let_130_ = game_location__3eview_pos(adjust_location_for_pickup_or_putdown(view.locations.cursor), view) local row = _let_130_["row"] local col = _let_130_["col"]
+ local _let_127_ = game_location__3eview_pos(adjust_location_for_pickup_or_putdown(view.locations.cursor), view) local row = _let_127_["row"] local col = _let_127_["col"]
 
  local pos = {row = (row + 1), col = (col - 2)}
- local function _131_(_241, _242) local _132_ = _242 if (_132_ == 1) then return "\240\159\175\129" elseif (_132_ == 2) then return "\240\159\175\130" elseif (_132_ == 3) then return "\240\159\175\131" else return nil end end frame_buffer.write(fbo, "draw", pos, {width = 3, height = 1}, _131_)
- local function _134_() return "Normal" end frame_buffer.write(fbo, "color", pos, {width = 3, height = 1}, _134_) else end
+ local function _128_(_241, _242) local _129_ = _242 if (_129_ == 1) then return "\240\159\175\129" elseif (_129_ == 2) then return "\240\159\175\130" elseif (_129_ == 3) then return "\240\159\175\131" else return nil end end frame_buffer.write(fbo, "draw", pos, {width = 3, height = 1}, _128_)
+ local function _131_() return "Normal" end frame_buffer.write(fbo, "color", pos, {width = 3, height = 1}, _131_) else end
 
 
 
 
- local function _136_(_241, _242) return _242 end
- local function _137_(_241, _242) local _138_ = _242 if ((_G.type(_138_) == "table") and (nil ~= (_138_).animating)) then local animating = (_138_).animating return true elseif true then local _0 = _138_ return false else return nil end end
- local function _140_(_241, _242) return (_241["z-index"] < _242["z-index"]) end
- local function _141_(_241, _242) return draw_card(fbo, _242, _242.location) end E.map(E["sort$"](E.filter(E.map(view.cards, _136_), _137_), _140_), _141_)
+ local function _133_(_241, _242) return _242 end
+ local function _134_(_241, _242) local _135_ = _242 if ((_G.type(_135_) == "table") and (nil ~= (_135_).animating)) then local animating = (_135_).animating return true elseif true then local _0 = _135_ return false else return nil end end
+ local function _137_(_241, _242) return (_241["z-index"] < _242["z-index"]) end
+ local function _138_(_241, _242) return draw_card(fbo, _242, _242.location) end E.map(E["sort$"](E.filter(E.map(view.cards, _133_), _134_), _137_), _138_)
 
 
  api.nvim_buf_clear_namespace(view["buf-id"], view["hl-ns"], 0, -1)
- local function _142_(_241, _242) return table.concat(_242, "") end vim.api.nvim_buf_set_lines(view["buf-id"], 0, -1, false, enum_2fmap(fbo.draw, _142_))
+ local function _139_(_241, _242) return table.concat(_242, "") end vim.api.nvim_buf_set_lines(view["buf-id"], 0, -1, false, enum_2fmap(fbo.draw, _139_))
 
 
  for row_n, row in ipairs(fbo.color) do local byte_offset = 0

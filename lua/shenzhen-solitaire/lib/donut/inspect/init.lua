@@ -7,7 +7,7 @@
 
  M.inspect = function(...)
 
- local function _4_(...) local mod_44_auto = rel_require("enum") local keys_45_auto = {"pack", "unpack"} for __48_auto, key_49_auto in ipairs(keys_45_auto) do assert(not (nil == (mod_44_auto)[key_49_auto]), string.format("mod did not have key %s %s", key_49_auto, "\"enum\"")) end return mod_44_auto end local _local_3_ = _4_(...) local e_2fpack = _local_3_["pack"] local e_2funpack = _local_3_["unpack"] do local _ = {nil} end
+ local function _4_(...) local mod_36_auto = rel_require("enum") local keys_37_auto = {"pack", "unpack"} for __40_auto, key_41_auto in ipairs(keys_37_auto) do assert(not (nil == (mod_36_auto)[key_41_auto]), string.format("mod did not have key %s %s", key_41_auto, "\"enum\"")) end return mod_36_auto end local _local_3_ = _4_(...) local e_2fpack = _local_3_["pack"] local e_2funpack = _local_3_["unpack"] do local _ = {nil} end
  local _let_5_ = require("fennel") local view = _let_5_["view"]
  local args = e_2fpack(...)
  local viewed = {}

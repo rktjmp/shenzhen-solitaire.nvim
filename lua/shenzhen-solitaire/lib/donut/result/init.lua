@@ -6,7 +6,7 @@
 
 
  local rel_require local function _1_(ddd_2_auto, rawrequire_3_auto) local full_mod_path_4_auto = (ddd_2_auto or "") local prefix_5_auto = (string.match(full_mod_path_4_auto, "(.+)%.result$") or "") local function _2_(_241) return rawrequire_3_auto((prefix_5_auto .. "." .. _241)) end return _2_ end rel_require = _1_(..., require)
- local function _4_(...) local mod_44_auto = rel_require("type") local keys_45_auto = {"type-of"} for __48_auto, key_49_auto in ipairs(keys_45_auto) do assert(not (nil == (mod_44_auto)[key_49_auto]), string.format("mod did not have key %s %s", key_49_auto, "\"type\"")) end return mod_44_auto end local _local_3_ = _4_(...) local type_of = _local_3_["type-of"] local enum = rel_require("enum") do local _ = {nil, nil} end
+ local function _4_(...) local mod_36_auto = rel_require("type") local keys_37_auto = {"type-of"} for __40_auto, key_41_auto in ipairs(keys_37_auto) do assert(not (nil == (mod_36_auto)[key_41_auto]), string.format("mod did not have key %s %s", key_41_auto, "\"type\"")) end return mod_36_auto end local _local_3_ = _4_(...) local type_of = _local_3_["type-of"] local enum = rel_require("enum") do local _ = {nil, nil} end
 
 
 
