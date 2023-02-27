@@ -87,9 +87,10 @@
   ;; check run would be valid
   (fn alternating-suit-and-dec-value? [[head & tail]]
     (not (= nil (E.reduce tail
-                             head
-                             #(match [$1 $3]
-                                (where [[ls lv] [s v]] (and (not (= ls s)) (= v (- lv 1)))) $3)))))
+                          head
+                          #(match [$1 $3]
+                             (where [[ls lv] [s v]] (and (not (= ls s)) (= v (- lv 1)))) $3)))))
+
   (fn contains-no-specials? [run]
     (-> (E.filter run #(M.special-card? $2))
         (E.empty?)))
