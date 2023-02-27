@@ -32,7 +32,8 @@
   ;; set default inside call so we pickup on colorscheme changes between new games
   ;; not really worth an autocmd
   (local hl-normal-background (let [{: background} (vim.api.nvim_get_hl_by_name :Normal true)
-                                    hex (fmt "#%x" background)]
+                                    {: tohex} (require :bit)
+                                    hex (fmt "#%s" (tohex background 6))]
                                 hex))
   (local default-config
     {:card {:size {:width 7 :height 5}
