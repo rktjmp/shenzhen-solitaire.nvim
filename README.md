@@ -82,39 +82,39 @@ autocommands to clean up the UI.
 ```fennel
 {:card {:size {:width 7 :height 5}
         :borders {:ne :╮ :nw :╭ :se :╯ :sw :╰ :n :─ :s :─ :e :│ :w :│}}
-   :buttons {:pos {:row 1 :col 34}}
-   :tableau {:pos {:row 7 :col 1}
-             :gap 3}
-   :cell {:pos {:row 1 :col 1}
-          :gap 3}
-   :foundation {:pos {:row 1 :col 41}
-                :gap 3}
-   :highlight {:empty {:fg :#495159 :bg hl-normal-background}
-               :button {:fg :#495159 :bg hl-normal-background}
-               :coin {:fg :#e8df78 :bg hl-normal-background}
-               :string {:fg :#879ff6 :bg hl-normal-background}
-               :myriad {:fg :#23b3ac :bg hl-normal-background}
-               :flower {:fg :#934188 :bg hl-normal-background}
-               :dragon-green {:fg :#52ad56 :bg hl-normal-background}
-               :dragon-white {:fg :#cfcfcf :bg hl-normal-background}
-               :dragon-red {:fg :#d34d4d :bg hl-normal-background}}
-   :info {:pos {:row 22 :col 3}}
-   :size {:width 80 :height 40}
-   :cursor {:show false} ;; show cursor, strongly recommended without a mouse
-   :difficulty {:show-valid-locations false ;; show possible interactive locations, useful without a mouse.
-                :allow-undo false
-                :auto-move-obvious true}
-   :gauntlet false
-   :keys {:left-mouse :<LeftMouse>
-          :right-mouse :<RightMouse>
-          :interact :y
-          :auto-move :a
-          :save-game :ww
-          :load-game :ll
-          :restart-game :rr
-          :undo-last-move :u
-          :next-location :<Tab>
-          :prev-location :<S-Tab>}}
+ :buttons {:pos {:row 1 :col 34}}
+ :tableau {:pos {:row 7 :col 1}
+           :gap 3}
+ :cell {:pos {:row 1 :col 1}
+        :gap 3}
+ :foundation {:pos {:row 1 :col 41}
+              :gap 3}
+ :highlight {:empty {:fg :#495159 :bg hl-normal-background}
+             :button {:fg :#495159 :bg hl-normal-background}
+             :coin {:fg :#e8df78 :bg hl-normal-background}
+             :string {:fg :#879ff6 :bg hl-normal-background}
+             :myriad {:fg :#23b3ac :bg hl-normal-background}
+             :flower {:fg :#934188 :bg hl-normal-background}
+             :dragon-green {:fg :#52ad56 :bg hl-normal-background}
+             :dragon-white {:fg :#cfcfcf :bg hl-normal-background}
+             :dragon-red {:fg :#d34d4d :bg hl-normal-background}}
+ :info {:pos {:row 22 :col 3}}
+ :size {:width 80 :height 40}
+ :cursor {:show false} ;; show cursor, strongly recommended without a mouse
+ :difficulty {:show-valid-locations false ;; show possible interactive locations, useful without a mouse.
+              :allow-undo false
+              :auto-move-obvious true}
+ :gauntlet false
+ :keys {:left-mouse :<LeftMouse>
+        :right-mouse :<RightMouse>
+        :interact :y
+        :auto-move :a
+        :save-game :ww
+        :load-game :ll
+        :restart-game :rr
+        :undo-last-move :u
+        :next-location :<Tab>
+        :prev-location :<S-Tab>}}
 ```
 
 ## License
