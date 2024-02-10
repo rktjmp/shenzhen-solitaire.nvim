@@ -1,3 +1,5 @@
+# Deprecated!, please see [playtime.nvim](https://github.com/rktjmp/playtime.nvim) for an updated Shenzhen Solitaire implementation (and other games).
+
 # Shenzhen Solitaire 🀙🀐🀇
 
 <div align="center">
